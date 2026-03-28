@@ -115,13 +115,6 @@ FinTrack AI follows a distributed architecture supporting multiple client types:
                                                |  [Redis] | [Ollama AI]  |
                                                +-------------------------+
 ```
-                    +------------------+------------------+
-                    |                  |                  |
-             +----------+     +---------------+   +-----------+
-             |  AI API  |     |  Email SMTP   |   |  Redis    |
-             | (Claude) |     |   Service     |   |  Cache    |
-             +----------+     +---------------+   +-----------+
-```
 
 ### 3.3 Layered Backend Architecture
 
