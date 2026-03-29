@@ -33,6 +33,16 @@ spring:
             enable: true
   config:
     import: optional:file:.env[.properties]
+
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        model: ${OLLAMA_CHAT_MODEL:dolphin-phi}
+        options:
+          temperature: 0.0
+
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -46,4 +56,14 @@ jwt:
     secret: ${JWT_SECRET:this-is-a-very-long-secret-key-for-jwt-authentication-123456}
     access-expiration: ${JWT_ACCESS_EXPIRATION:900}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
+
+nlp:
+  ollama:
+    timeout-seconds: 25
+    enabled: true
+  fallback:
+      enabled: true                # OpenNLP rule-based fallback
+  prefilter:
+      min-text-length: 3
+      max-text-length: 500
 

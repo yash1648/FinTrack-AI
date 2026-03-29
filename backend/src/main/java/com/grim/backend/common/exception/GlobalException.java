@@ -1,6 +1,7 @@
 package com.grim.backend.common.exception;
 
 import com.grim.backend.auth.dto.ApiErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalException {
 
     @ExceptionHandler(ConflictException.class)
@@ -71,16 +73,27 @@ public class GlobalException {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
+
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ApiErrorResponse.of(HttpStatus.UNPROCESSABLE_ENTITY.value(), message));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleAllExceptions(Exception ex){
+    public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
+
+        log.error("Unhandled exception", ex);
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An unexpected error occurred"));
+                .body(ApiErrorResponse.of(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "An unexpected error occurred"
+                ));
     }
+
 }

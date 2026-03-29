@@ -16,7 +16,7 @@ import java.util.UUID;
         name = "budgets",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        columnNames = {"user_id","category_id","month","year"}
+                        columnNames = {"user_id","category_id","budget_month","budget_year"}
                 )
         }
 )
@@ -39,13 +39,13 @@ public class Budget {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @Column(name="limit_amount", nullable = false, precision = 15, scale = 2)
+    @Column( nullable = false, precision = 15, scale = 2,name = "limit_amount")
     private BigDecimal limitAmount;
 
-    @Column(nullable = false)
+    @Column(nullable = false,name = "budget_month")
     private short month;
 
-    @Column(nullable = false)
+    @Column(nullable = false,name = "budget_year")
     private short year;
 
     @CreationTimestamp
