@@ -15,6 +15,22 @@ spring:
     console:
       enabled: true
       path: /api/v1/swagger/h2-console
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 server:
   port: 6969
 
@@ -26,5 +42,5 @@ springdoc:
 
 jwt:
     secret: ${JWT_SECRET:this-is-a-very-long-secret-key-for-jwt-authentication-123456}
-    access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
-    refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
+    access-expiration: ${JWT_ACCESS_EXPIRATION:900}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}

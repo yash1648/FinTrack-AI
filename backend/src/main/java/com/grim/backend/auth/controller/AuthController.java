@@ -44,13 +44,13 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(
             @RequestBody RefreshTokenRequest request
     ){
-        AccessTokenResponse token = authService.refreshToken(request.refreshToken());
+        AuthResponse response = authService.refreshToken(request.refreshToken());
 
         return ResponseEntity.ok(
-                new ApiResponse<>(true, token)
+                new ApiResponse<>(true, response)
         );
     }
 

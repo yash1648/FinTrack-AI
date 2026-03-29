@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @Slf4j
@@ -29,12 +30,13 @@ public class JwtProvider {
         this.refreshTokenexpirationTime = refreshExp;
     }
 
-    public String generateAccessToken(String email) {
+    public String generateAccessToken(UUID userId, String email) {
 
         log.info("Generating token for user {}", email);
 
         return Jwts.builder()
                 .setSubject(email)
+                .claim("userId", userId.toString())
                 .claim("type","access")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenexpirationTime))
@@ -63,6 +65,11 @@ public class JwtProvider {
 
     public String extractEmail(String token) {
         return parseToken(token).getSubject();
+    }
+
+    public UUID extractUserId(String token) {
+        String userIdStr = parseToken(token).get("userId", String.class);
+        return UUID.fromString(userIdStr);
     }
 
     public boolean isTokenExpired(String token) {

@@ -1,0 +1,25 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-server
+    restart: always
+
+    ports:
+      - "6379:6379"
+
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+    command: >
+      sh -c "
+      if [ -z \"$REDIS_PASSWORD\" ]; then
+        redis-server
+      else
+        redis-server --requirepass $REDIS_PASSWORD
+      fi
+      "
+
+    volumes:
+      - redis_data:/data
+volumes:
+    redis_data:
