@@ -42,9 +42,13 @@ public class SecurityBeanConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/logout",
-                                 "/api/v1/auth/profile",
-                                 "/api/v1/auth/change-password"
-                         ).authenticated()
+                                  "/api/v1/auth/profile",
+                                  "/api/v1/auth/change-password",
+                                  "/api/v1/categories/**",
+                                  "/api/v1/budgets/**",
+                                  "/api/v1/transactions/**",
+                                  "/api/v1/dashboard/**"
+                          ).authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilterChain,

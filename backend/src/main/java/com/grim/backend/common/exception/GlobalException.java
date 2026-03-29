@@ -1,10 +1,6 @@
 package com.grim.backend.common.exception;
 
 import com.grim.backend.auth.dto.ApiErrorResponse;
-import com.grim.backend.auth.exception.AccountLockedException;
-import com.grim.backend.auth.exception.ConflictException;
-import com.grim.backend.auth.exception.EmailNotVerifiedException;
-import com.grim.backend.auth.exception.TokenExpiredException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -53,6 +49,18 @@ public class GlobalException {
     public ResponseEntity<ApiErrorResponse> handleUserNotFound(UsernameNotFoundException ex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiErrorResponse.of(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiErrorResponse.of(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbiddenAction(ForbiddenActionException ex){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiErrorResponse.of(HttpStatus.FORBIDDEN.value(), ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

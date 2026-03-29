@@ -1,11 +1,11 @@
-package com.grim.backend.auth.exception;
+package com.grim.backend.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(HttpStatus.FORBIDDEN)
-public class EmailNotVerifiedException extends RuntimeException {
-    public EmailNotVerifiedException(String message) {
+public class ForbiddenActionException extends RuntimeException {
+    public ForbiddenActionException(String message) {
         super(message);
     }
 }

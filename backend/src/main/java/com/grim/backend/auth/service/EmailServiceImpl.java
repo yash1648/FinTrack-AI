@@ -26,7 +26,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendVerificationEmail(String to, String token) {
         String subject = "Verify your email - FinTrack AI";
         String content = "Hello,\n\nPlease verify your email using the following link: " +
-                "http://localhost:6969/api/v1/auth/verify?token=" + token +
+                "http://localhost:6969/api/v1/auth/verify-email?token=" + token +
                 "\n\nThis link will expire in 15 minutes.";
 
         sendEmail(to, subject, content);

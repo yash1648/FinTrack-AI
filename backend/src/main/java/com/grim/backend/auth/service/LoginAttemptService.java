@@ -1,5 +1,8 @@
 package com.grim.backend.auth.service;
 
+import com.grim.backend.auth.entity.User;
+import com.grim.backend.auth.repository.UserRepository;
+import com.grim.backend.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,6 +20,8 @@ public class LoginAttemptService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final EmailService emailService;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
     private static final int MAX_ATTEMPTS = 5;
     private static final int INITIAL_LOCK_TIME_MINS = 15;
     private static final String LOCKOUT_KEY_PREFIX = "lockout:";
@@ -50,6 +55,11 @@ public class LoginAttemptService {
             log.warn("Account {} locked for {} minutes", email, lockTime);
             
             emailService.sendLockoutNotification(email, lockTime);
+
+            userRepository.findByEmail(email).ifPresent(user -> {
+                notificationService.sendSecurityAlert(user, "Account Locked", 
+                    "Your account has been locked for " + lockTime + " minutes due to multiple failed login attempts.");
+            });
         }
 
         redisTemplate.opsForValue().set(key, lockoutData, Duration.ofDays(1));
