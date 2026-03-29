@@ -2,6 +2,7 @@ package com.grim.backend.auth.controller;
 
 import com.grim.backend.auth.dto.*;
 import com.grim.backend.auth.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -19,7 +21,9 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<com.grim.backend.auth.dto.ApiResponse<MessageResponse>> register(
             @Valid @RequestBody RegisterRequest request
-            ) {
+                ) {
+
+
 
         authService.registerUser(request);
 
@@ -90,6 +94,7 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
+
     public ResponseEntity<ApiResponse<UserDto>> getProfile(Principal principal) {
         UserDto profile = authService.getProfile(principal.getName());
         return ResponseEntity.ok(new ApiResponse<>(true, profile));

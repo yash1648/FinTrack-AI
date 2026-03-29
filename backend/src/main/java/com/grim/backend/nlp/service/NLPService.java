@@ -9,6 +9,7 @@ import com.grim.backend.nlp.dto.ParseResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,6 +53,10 @@ public class NLPService {
 
             String response = chatClient.prompt()
                     .user(prompt)
+                    .options(OllamaChatOptions
+                            .builder()
+                            .disableThinking()
+                            .build())
                     .call()
                     .content();
 
