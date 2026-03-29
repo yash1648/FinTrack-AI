@@ -1,14 +1,13 @@
 package com.grim.backend.auth.service;
 
-import com.grim.backend.auth.dto.AccessTokenResponse;
-import com.grim.backend.auth.dto.AuthResponse;
-import com.grim.backend.auth.dto.LoginRequest;
-import com.grim.backend.auth.dto.RegisterRequest;
+import com.grim.backend.auth.dto.*;
+import com.grim.backend.auth.entity.PasswordResetToken;
 import com.grim.backend.auth.entity.RefreshToken;
 import com.grim.backend.auth.entity.User;
 import com.grim.backend.auth.exception.AccountLockedException;
 import com.grim.backend.auth.exception.ConflictException;
 import com.grim.backend.auth.exception.EmailNotVerifiedException;
+import com.grim.backend.auth.repository.PasswordResetTokenRepository;
 import com.grim.backend.auth.repository.RefreshTokenRepository;
 import com.grim.backend.auth.repository.UserRepository;
 import com.grim.backend.auth.security.JwtProvider;
@@ -33,6 +32,7 @@ import java.util.UUID;
 public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
@@ -82,10 +82,110 @@ public class AuthService {
 
         return new AuthResponse(
                 accessToken,
-                refreshTokenValue
+                refreshTokenValue,
+                new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency())
         );
     }
 
+    @Transactional
+    public void verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired verification token"));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification token has expired");
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String resetToken = generateRandomToken();
+            String tokenHash = DigestUtils.sha256Hex(resetToken);
+
+            PasswordResetToken token = PasswordResetToken.builder()
+                    .user(user)
+                    .tokenHash(tokenHash)
+                    .expiresAt(LocalDateTime.now().plusMinutes(30))
+                    .build();
+
+            passwordResetTokenRepository.save(token);
+            emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
+        });
+    }
+
+    @Transactional
+    public void resetPassword(String resetToken, String newPassword) {
+        if (passwordBlocklistService.isBlocked(newPassword)) {
+            throw new IllegalArgumentException("The password you provided is too common and insecure. Please choose a different one.");
+        }
+
+        String tokenHash = DigestUtils.sha256Hex(resetToken);
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        if (token.isUsed() || token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+
+        User user = token.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        token.setUsed(true);
+        passwordResetTokenRepository.save(token);
+
+        // Invalidate all refresh tokens for security on password reset
+        refreshTokenRepository.deleteAll(user.getRefreshTokens());
+    }
+
+    @Transactional
+    public UserDto getProfile(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency());
+    }
+
+    @Transactional
+    public UserDto updateProfile(String email, UpdateProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (request.name() != null) {
+            user.setName(request.name());
+        }
+        if (request.currency() != null) {
+            user.setCurrency(request.currency());
+        }
+
+        userRepository.save(user);
+        return new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency());
+    }
+
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Incorrect current password");
+        }
+
+        if (passwordBlocklistService.isBlocked(request.newPassword())) {
+            throw new IllegalArgumentException("The password you provided is too common and insecure. Please choose a different one.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        // Optionally invalidate all refresh tokens on password change
+        refreshTokenRepository.deleteAll(user.getRefreshTokens());
+    }
 
     @Transactional
     public AuthResponse loginUser(LoginRequest request){
@@ -127,7 +227,11 @@ public class AuthService {
 
         refreshTokenRepository.save(token);
 
-        return new AuthResponse(accessToken, refreshTokenValue);
+        return new AuthResponse(
+                accessToken,
+                refreshTokenValue,
+                new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency())
+        );
     }
 
 
@@ -163,7 +267,8 @@ public class AuthService {
 
         return new AuthResponse(
                 newAccessToken,
-                newRefreshTokenValue
+                newRefreshTokenValue,
+                new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency())
         );
     }
 

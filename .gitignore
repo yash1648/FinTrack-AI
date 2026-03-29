@@ -2,3 +2,5 @@
 .vscode
 
 FinTrack AI.iml
+
+.env

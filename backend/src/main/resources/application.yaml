@@ -2,10 +2,10 @@ spring:
   application:
     name: fintrack-ai-backend
   datasource:
-    url: jdbc:h2:mem:testdb
-    driverClassName: org.h2.Driver
-    username: sa
-    password:
+    url: ${DB_URL:jdbc:h2:mem:testdb}
+    driverClassName: ${DB_CLASS:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -31,8 +31,10 @@ spring:
           auth: true
           starttls:
             enable: true
+  config:
+    import: optional:file:.env[.properties]
 server:
-  port: 6969
+  port: ${SERVER_PORT:8080}
 
 springdoc:
   api-docs:
@@ -44,3 +46,4 @@ jwt:
     secret: ${JWT_SECRET:this-is-a-very-long-secret-key-for-jwt-authentication-123456}
     access-expiration: ${JWT_ACCESS_EXPIRATION:900}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
+

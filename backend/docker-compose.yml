@@ -1,6 +1,8 @@
+name: fintrack-ai-backend
+
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:7.0-alpine
     container_name: redis-server
     restart: always
 
