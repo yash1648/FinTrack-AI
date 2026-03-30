@@ -6,3 +6,5 @@ FinTrack AI.iml
 .env
 
 backend/src/test/
+
+CLAUDE.md

@@ -54,4 +54,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "AND t.type = 'EXPENSE' " +
             "AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
     BigDecimal sumByCategoryAndPeriod(@Param("userId") UUID userId, @Param("categoryId") UUID categoryId, @Param("month") int month, @Param("year") int year);
+
+    @Query("""
+SELECT t FROM Transaction t
+WHERE t.user.id = :userId
+AND t.type = 'EXPENSE'
+AND t.date >= :startDate
+""")
+    List<Transaction> findLast90Days(UUID userId, LocalDate startDate);
 }
