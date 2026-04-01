@@ -1,0 +1,25 @@
+### Get All Categories
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+### Create Category
+POST {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Freelance"
+}
+
+### Update Category
+PATCH {{baseUrl}}/categories/CATEGORY_ID
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Freelance Income"
+}
+
+### Delete Category
+DELETE {{baseUrl}}/categories/CATEGORY_ID
+Authorization: Bearer {{token}}

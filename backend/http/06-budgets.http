@@ -1,0 +1,28 @@
+### Get All Budgets
+GET {{baseUrl}}/budgets
+Authorization: Bearer {{token}}
+
+### Create Budget
+POST {{baseUrl}}/budgets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "categoryId": "CATEGORY_ID",
+  "limitAmount": 2000,
+  "month": 4,
+  "year": 2026
+}
+
+### Update Budget
+PATCH {{baseUrl}}/budgets/BUDGET_ID
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "limitAmount": 2500
+}
+
+### Delete Budget
+DELETE {{baseUrl}}/budgets/BUDGET_ID
+Authorization: Bearer {{token}}

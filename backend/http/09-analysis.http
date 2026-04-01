@@ -1,0 +1,11 @@
+### Financial Insights
+GET {{baseUrl}}/analysis/insights
+Authorization: Bearer {{token}}
+
+### Detect Anomalies
+GET {{baseUrl}}/analysis/anomalies
+Authorization: Bearer {{token}}
+
+### Expense Projection
+GET {{baseUrl}}/analysis/projection
+Authorization: Bearer {{token}}

@@ -1,0 +1,76 @@
+### Register User
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Yash",
+  "email": "yashbagal1648@gmail.com",
+  "password": "Password@123"
+}
+
+### Verify Email (replace TOKEN with actual token from email)
+GET {{baseUrl}}/auth/verify-email?token=TOKEN
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "yashbagal1648@gmail.com",
+  "password": "Password@123"
+}
+
+### Refresh Token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "PASTE_REFRESH_TOKEN_HERE"
+}
+
+### Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### Forgot Password
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "yashbagal1648@gmail.com"
+}
+
+### Reset Password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "PASTE_TOKEN_FROM_EMAIL",
+  "newPassword": "NewPassword@123"
+}
+
+### Get Profile
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+
+### Update Profile
+PATCH {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Yash Bagal",
+  "currency": "INR"
+}
+
+### Change Password
+PATCH {{baseUrl}}/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "Password@123",
+  "newPassword": "NewPassword@123"
+}

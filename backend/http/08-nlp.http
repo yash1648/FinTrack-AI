@@ -1,0 +1,8 @@
+### Parse Natural Language Transaction
+POST {{baseUrl}}/nlp/parse
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "text": "I spent 100 on Food today"
+}

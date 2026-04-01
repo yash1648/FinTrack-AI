@@ -1,0 +1,15 @@
+### Expense Distribution by Category
+GET {{baseUrl}}/reports/distribution
+Authorization: Bearer {{token}}
+
+### Expense Distribution (with date range)
+GET {{baseUrl}}/reports/distribution?from=2026-04-01&to=2026-04-30
+Authorization: Bearer {{token}}
+
+### Monthly Trend
+GET {{baseUrl}}/reports/monthly?from=2026-01-01&to=2026-04-30
+Authorization: Bearer {{token}}
+
+### Daily Trend
+GET {{baseUrl}}/reports/daily?from=2026-04-01&to=2026-04-30
+Authorization: Bearer {{token}}

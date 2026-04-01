@@ -1,0 +1,47 @@
+### Create Income Transaction
+POST {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 5000,
+  "type": "INCOME",
+  "category_id": "CATEGORY_ID",
+  "description": "Project Payment",
+  "date": "2026-04-01"
+}
+
+### Create Expense Transaction
+POST {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 200,
+  "type": "EXPENSE",
+  "category_id": "CATEGORY_ID",
+  "description": "Lunch",
+  "date": "2026-04-01"
+}
+
+### Get Transactions (with pagination & filters)
+GET {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
+
+### Get Single Transaction
+GET {{baseUrl}}/transactions/TRANSACTION_ID
+Authorization: Bearer {{token}}
+
+### Update Transaction
+PATCH {{baseUrl}}/transactions/TRANSACTION_ID
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 250,
+  "description": "Big Lunch"
+}
+
+### Delete Transaction
+DELETE {{baseUrl}}/transactions/TRANSACTION_ID
+Authorization: Bearer {{token}}

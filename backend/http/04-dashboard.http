@@ -1,0 +1,3 @@
+### Get Dashboard Summary
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{token}}

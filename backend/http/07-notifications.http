@@ -1,0 +1,11 @@
+### Get All Notifications (paginated)
+GET {{baseUrl}}/notifications
+Authorization: Bearer {{token}}
+
+### Mark Notification as Read
+PATCH {{baseUrl}}/notifications/NOTIFICATION_ID/read
+Authorization: Bearer {{token}}
+
+### Mark All Notifications as Read
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{token}}
