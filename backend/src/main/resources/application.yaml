@@ -9,7 +9,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    open-in-view: true
+    open-in-view: false
     show-sql: true
   h2:
     console:
@@ -42,6 +42,8 @@ spring:
         model: ${OLLAMA_CHAT_MODEL:dolphin-phi}
         options:
           temperature: 0.0
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 
   cache:
     redis:
@@ -73,4 +75,7 @@ nlp:
   prefilter:
       min-text-length: 3
       max-text-length: 500
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 

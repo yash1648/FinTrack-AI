@@ -41,7 +41,7 @@ public class BudgetService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        categoryRepository.findByIdAndUser(categoryId, userId)
+        Category category = categoryRepository.findByIdAndUser(categoryId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found or not accessible"));
 
         if (budgetRepository.existsByUserIdAndCategoryIdAndMonthAndYear(userId, categoryId, month, year)) {
@@ -50,7 +50,7 @@ public class BudgetService {
 
         Budget budget = Budget.builder()
                 .user(user)
-                .category(categoryRepository.findById(categoryId).get())
+                .category(category)
                 .limitAmount(limitAmount)
                 .month(month)
                 .year(year)
@@ -59,19 +59,30 @@ public class BudgetService {
         return budgetRepository.save(budget);
     }
 
-    public List<Map<String, Object>> getBudgets(UUID userId) {
-        LocalDate now = LocalDate.now();
-        short month = (short) now.getMonthValue();
-        short year = (short) now.getYear();
+    public List<Map<String, Object>> getBudgets(UUID userId, Short month, Short year) {
+        short targetMonth;
+        short targetYear;
 
-        List<Budget> budgets = budgetRepository.findByUserAndPeriod(userId, month, year);
+        if (month == null || year == null) {
+            LocalDate now = LocalDate.now();
+            targetMonth = (short) now.getMonthValue();
+            targetYear = (short) now.getYear();
+        } else {
+            targetMonth = month;
+            targetYear = year;
+        }
+
+        List<Budget> budgets = budgetRepository.findByUserAndPeriod(userId, targetMonth, targetYear);
         List<Map<String, Object>> enrichedBudgets = new ArrayList<>();
 
         for (Budget budget : budgets) {
-            BigDecimal spent = transactionRepository.sumByCategoryAndPeriod(userId, budget.getCategory().getId(), month, year);
+            BigDecimal spent = transactionRepository.sumByCategoryAndPeriod(userId, budget.getCategory().getId(), targetMonth, targetYear);
             if (spent == null) spent = BigDecimal.ZERO;
 
-            BigDecimal percentage = spent.divide(budget.getLimitAmount(), 4, RoundingMode.HALF_UP).multiply(new BigDecimal(100));
+            BigDecimal limitAmount = budget.getLimitAmount();
+            BigDecimal percentage = limitAmount.compareTo(BigDecimal.ZERO) > 0
+                    ? spent.divide(limitAmount, 4, RoundingMode.HALF_UP).multiply(new BigDecimal(100))
+                    : BigDecimal.ZERO;
             String status = "ok";
             if (percentage.compareTo(new BigDecimal(100)) >= 0) status = "exceeded";
             else if (percentage.compareTo(new BigDecimal(80)) >= 0) status = "warning";
@@ -79,9 +90,9 @@ public class BudgetService {
             enrichedBudgets.add(Map.of(
                     "id", budget.getId(),
                     "category", Map.of("id", budget.getCategory().getId(), "name", budget.getCategory().getName()),
-                    "limitAmount", budget.getLimitAmount(),
+                    "limit_amount", limitAmount,
                     "spent", spent,
-                    "remaining", budget.getLimitAmount().subtract(spent),
+                    "remaining", limitAmount.subtract(spent),
                     "percentage", percentage,
                     "status", status,
                     "month", budget.getMonth(),
@@ -128,6 +139,9 @@ public class BudgetService {
                     if (spent == null) spent = BigDecimal.ZERO;
 
                     BigDecimal limit = budget.getLimitAmount();
+                    if (limit.compareTo(BigDecimal.ZERO) == 0) {
+                        return;
+                    }
                     BigDecimal percentage = spent.divide(limit, 4, RoundingMode.HALF_UP).multiply(new BigDecimal(100));
 
                     if (percentage.compareTo(new BigDecimal(100)) >= 0) {

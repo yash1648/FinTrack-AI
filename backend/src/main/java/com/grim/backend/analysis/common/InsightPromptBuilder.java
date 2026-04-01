@@ -14,22 +14,23 @@ public class InsightPromptBuilder {
 
         prompt.append("""
 You are a financial analysis assistant.
+Analyze spending patterns and give insights and recommendations based on the provided data.
 
-Analyze spending patterns and give insights and recommendations.
-
-Spending summary:
+Spending summary (Category: Amount):
 """);
 
         totals.forEach((k,v) ->
-                prompt.append(k).append(": ").append(v).append("\n")
+                prompt.append("- ").append(k).append(": ").append(v).append("\n")
         );
 
         prompt.append("""
-Return JSON:
+
+Return ONLY a valid JSON object with the following structure:
 {
- "patterns": [],
- "recommendations": []
+ "patterns": ["string"],
+ "recommendations": ["string"]
 }
+Do not include any other text or explanation.
 """);
 
         return prompt.toString();

@@ -8,3 +8,10 @@ FinTrack AI.iml
 backend/src/test/
 
 CLAUDE.md
+
+.claude
+
+backend/http
+design/
+
+

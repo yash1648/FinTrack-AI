@@ -38,6 +38,7 @@ public class JwtProvider {
                 .setSubject(email)
                 .claim("userId", userId.toString())
                 .claim("type","access")
+
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenexpirationTime))
                 .signWith(signingKey)
@@ -58,6 +59,7 @@ public class JwtProvider {
 
         return Jwts.parserBuilder()
                 .setSigningKey(signingKey)
+                .setAllowedClockSkewSeconds(60) // Allow 1 minute clock skew
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

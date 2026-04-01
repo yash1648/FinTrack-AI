@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.grim.backend.analysis.dto.AiInsightResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OllamaAnalysisClient {
 
     private final ChatClient chatClient;
@@ -20,10 +22,20 @@ public class OllamaAnalysisClient {
 
     public AiInsightResult analyze(String prompt) {
 
-        String result = chatClient
-                .prompt(prompt)
-                .call()
-                .content();
+        String result;
+        try {
+            result = chatClient
+                    .prompt(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            log.warn("Failed to call Ollama for analysis: {}", e.getMessage());
+            return new AiInsightResult(Collections.emptyList(), Collections.emptyList());
+        }
+
+        if (result == null || result.isBlank()) {
+            return new AiInsightResult(Collections.emptyList(), Collections.emptyList());
+        }
 
         try {
             JsonNode root = mapper.readTree(result);

@@ -115,7 +115,7 @@ public class TransactionService {
 
         BigDecimal netBalance = totalIncome.subtract(totalExpenses);
         List<Transaction> recentTransactions = transactionRepository.findTop5ByUserIdOrderByDateDesc(userId);
-        List<Map<String, Object>> activeBudgets = budgetService.getBudgets(userId);
+        List<Map<String, Object>> activeBudgets = budgetService.getBudgets(userId, null, null);
         
         List<Map<String, Object>> alerts = activeBudgets.stream()
                 .filter(b -> !"ok".equals(b.get("status")))
@@ -127,13 +127,21 @@ public class TransactionService {
                 ))
                 .toList();
 
+        // Get spending trend for last 7 days
+        List<Object[]> trend = transactionRepository.sumByDay(userId, now.minusDays(7), now);
+        List<Map<String, Object>> recentSpending = trend.stream()
+                .filter(r -> r[1] == TransactionType.EXPENSE)
+                .map(r -> Map.of("date", r[0], "amount", r[2]))
+                .toList();
+
         Map<String, Object> summary = new HashMap<>();
-        summary.put("totalIncome", totalIncome);
-        summary.put("totalExpenses", totalExpenses);
-        summary.put("netBalance", netBalance);
+        summary.put("total_income", totalIncome);
+        summary.put("total_expenses", totalExpenses);
+        summary.put("balance", netBalance);
+        summary.put("savings", totalIncome.subtract(totalExpenses).max(BigDecimal.ZERO));
         summary.put("currency", user.getCurrency());
         summary.put("month", now.getMonth().name() + " " + now.getYear());
-        summary.put("recentTransactions", recentTransactions.stream()
+        summary.put("recent_transactions", recentTransactions.stream()
                 .map(t -> Map.of(
                         "id", t.getId(),
                         "amount", t.getAmount(),
@@ -143,8 +151,27 @@ public class TransactionService {
                         "date", t.getDate()
                 ))
                 .toList());
-        summary.put("activeBudgetAlerts", alerts);
+        summary.put("active_budget_alerts", alerts);
+        summary.put("recent_spending", recentSpending);
 
         return summary;
+    }
+
+    public List<Map<String, Object>> getDistribution(UUID userId, LocalDate from, LocalDate to) {
+        return transactionRepository.sumByCategory(userId, from, to).stream()
+                .map(r -> Map.of("category", r[0], "amount", r[1]))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getMonthlyTrend(UUID userId, LocalDate from, LocalDate to) {
+        return transactionRepository.sumByMonth(userId, from, to).stream()
+                .map(r -> Map.of("year", r[0], "month", r[1], "type", r[2], "amount", r[3]))
+                .toList();
+    }
+
+    public List<Map<String, Object>> getDailyTrend(UUID userId, LocalDate from, LocalDate to) {
+        return transactionRepository.sumByDay(userId, from, to).stream()
+                .map(r -> Map.of("date", r[0], "type", r[1], "amount", r[2]))
+                .toList();
     }
 }

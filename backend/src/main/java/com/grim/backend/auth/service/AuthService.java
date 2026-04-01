@@ -237,6 +237,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refreshToken(String refreshToken){
+
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            throw new IllegalArgumentException("Refresh token is required");
+        }
+
         String tokenHash = DigestUtils.sha256Hex(refreshToken);
         RefreshToken token = refreshTokenRepository
                 .findByTokenHash(tokenHash)

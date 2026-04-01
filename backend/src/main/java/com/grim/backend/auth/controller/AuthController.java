@@ -30,7 +30,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(
                         true,
-                        new MessageResponse("Registration successful. Please verify your email.")
+                        new MessageResponse("Registration successful. Please verify your email using the link sent to your email.")
                 ));
 
     }
@@ -66,7 +66,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<MessageResponse>> logout(
-            @RequestBody RefreshTokenRequest request
+            @Valid @RequestBody RefreshTokenRequest request
     ){
 
         authService.logout(request.refreshToken());

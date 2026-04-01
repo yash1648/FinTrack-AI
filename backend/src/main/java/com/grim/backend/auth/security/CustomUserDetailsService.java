@@ -19,15 +19,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
 
-        User user=userRepository.findByEmail(username)
-                .orElseThrow(()->
-                        new UsernameNotFoundException("User not found with username: " + username));
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found with email: " + username));
 
-        return org.springframework.security.core.userdetails.User
-                .builder()
-                .username(user.getEmail())
-                .password(user.getPasswordHash())
-                .disabled(!user.isActive())
-                .build();
+        return new CustomUserDetails(user);
     }
 }

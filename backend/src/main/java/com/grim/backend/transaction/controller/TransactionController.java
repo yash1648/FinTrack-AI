@@ -2,7 +2,7 @@ package com.grim.backend.transaction.controller;
 
 import com.grim.backend.auth.dto.ApiResponse;
 import com.grim.backend.auth.dto.PaginationDto;
-import com.grim.backend.auth.security.JwtProvider;
+import com.grim.backend.auth.security.CustomUserDetails;
 import com.grim.backend.category.dto.CategoryResponse;
 import com.grim.backend.transaction.dto.CreateTransactionRequest;
 import com.grim.backend.transaction.dto.TransactionResponse;
@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -30,21 +31,19 @@ import java.util.stream.Collectors;
 public class TransactionController {
 
     private final TransactionService transactionService;
-    private final JwtProvider jwtProvider;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TransactionResponse>> createTransaction(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateTransactionRequest request) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
         Transaction transaction = transactionService.createTransaction(
-                userId, request.amount(), request.type(), request.categoryId(), request.description(), request.date());
+                userDetails.getId(), request.amount(), request.type(), request.categoryId(), request.description(), request.date());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(true, mapToResponse(transaction)));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TransactionResponse>>> getTransactions(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -55,9 +54,8 @@ public class TransactionController {
             @RequestParam(required = false) BigDecimal max_amount,
             @RequestParam(required = false) String search) {
         
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
         Page<Transaction> transactionPage = transactionService.getTransactions(
-                userId, from, to, type, category_id, min_amount, max_amount, search, page, limit);
+                userDetails.getId(), from, to, type, category_id, min_amount, max_amount, search, page, limit);
         
         List<TransactionResponse> data = transactionPage.getContent().stream()
                 .map(this::mapToResponse)
@@ -75,30 +73,27 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TransactionResponse>> getTransaction(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        Transaction transaction = transactionService.getTransactionById(userId, id);
+        Transaction transaction = transactionService.getTransactionById(userDetails.getId(), id);
         return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction)));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<TransactionResponse>> updateTransaction(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateTransactionRequest request) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
         Transaction transaction = transactionService.updateTransaction(
-                userId, id, request.amount(), request.type(), request.categoryId(), request.description(), request.date());
+                userDetails.getId(), id, request.amount(), request.type(), request.categoryId(), request.description(), request.date());
         return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransaction(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        transactionService.deleteTransaction(userId, id);
+        transactionService.deleteTransaction(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }
 

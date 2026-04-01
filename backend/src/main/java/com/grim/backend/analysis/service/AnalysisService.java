@@ -11,6 +11,7 @@ import com.grim.backend.analysis.dto.ProjectionResponse;
 import com.grim.backend.transaction.entity.Transaction;
 import com.grim.backend.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AnalysisService {
 
     private final TransactionRepository transactionRepository;
@@ -41,30 +43,44 @@ public class AnalysisService {
 
         String cacheKey = "insights:" + userId;
 
-        InsightData cached = (InsightData) redisTemplate.opsForValue().get(cacheKey);
+        InsightData cached = null;
 
-        if(cached != null) return cached;
+        try {
+            cached = (InsightData) redisTemplate.opsForValue().get(cacheKey);
+        } catch (Exception e) {
+            log.warn("Redis unavailable for insights cache: {}", e.getMessage());
+        }
+
+        if (cached != null) return cached;
+
         LocalDate startDate = LocalDate.now().minusDays(90);
-        List<Transaction> txs =
-                transactionRepository.findLast90Days(userId,startDate);
+        List<Transaction> txs = transactionRepository.findLast90Days(userId, startDate);
 
-        if(!hasAtLeast30DistinctTransactionDays(txs)) {
+        List<AnomalyResponse> anomalies = anomalyService.detect(txs);
+        ProjectionResponse projection = projectionService.project(txs);
+
+        if (!hasAtLeast30DistinctTransactionDays(txs)) {
             return InsightData.builder()
                     .sufficient(false)
                     .message("Add at least 30 days of transactions to unlock AI insights.")
+                    .anomalies(anomalies)
+                    .projectedMonthlyExpense(projection.getProjected())
                     .build();
         }
 
-        Map<String, BigDecimal> totals =
-                aggregator.aggregateByCategory(txs);
-
+        Map<String, BigDecimal> totals = aggregator.aggregateByCategory(txs);
         String prompt = promptBuilder.build(totals);
 
-        AiInsightResult aiResult = aiClient.analyze(prompt);
-
-        List<AnomalyResponse> anomalies = anomalyService.detect(txs);
-
-        ProjectionResponse projection = projectionService.project(txs);
+        AiInsightResult aiResult;
+        try {
+            aiResult = aiClient.analyze(prompt);
+            if (aiResult == null) {
+                aiResult = new AiInsightResult(List.of(), List.of());
+            }
+        } catch (Exception e) {
+            log.warn("AI analysis failed: {}", e.getMessage());
+            aiResult = new AiInsightResult(List.of(), List.of());
+        }
 
         InsightData data = InsightData.builder()
                 .sufficient(true)
@@ -75,8 +91,12 @@ public class AnalysisService {
                 .cachedAt(Instant.now())
                 .build();
 
-        redisTemplate.opsForValue()
-                .set(cacheKey, data, Duration.ofHours(6));
+        try {
+            redisTemplate.opsForValue()
+                    .set(cacheKey, data, Duration.ofHours(6));
+        } catch (Exception e) {
+            log.warn("Failed to cache insights in Redis: {}", e.getMessage());
+        }
 
         return data;
     }

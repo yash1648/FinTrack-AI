@@ -1,7 +1,7 @@
 package com.grim.backend.budget.controller;
 
 import com.grim.backend.auth.dto.ApiResponse;
-import com.grim.backend.auth.security.JwtProvider;
+import com.grim.backend.auth.security.CustomUserDetails;
 import com.grim.backend.budget.dto.BudgetResponse;
 import com.grim.backend.budget.dto.CreateBudgetRequest;
 import com.grim.backend.budget.dto.UpdateBudgetRequest;
@@ -12,14 +12,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/budgets")
@@ -27,20 +26,20 @@ import java.util.stream.Collectors;
 public class BudgetController {
 
     private final BudgetService budgetService;
-    private final JwtProvider jwtProvider;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getBudgets(@RequestHeader("Authorization") String token) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        return ResponseEntity.ok(new ApiResponse<>(true, budgetService.getBudgets(userId)));
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getBudgets(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) Short month,
+            @RequestParam(required = false) Short year) {
+        return ResponseEntity.ok(new ApiResponse<>(true, budgetService.getBudgets(userDetails.getId(), month, year)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<BudgetResponse>> createBudget(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateBudgetRequest request) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        Budget budget = budgetService.createBudget(userId, request.categoryId(), request.limitAmount(), request.month(), request.year());
+        Budget budget = budgetService.createBudget(userDetails.getId(), request.categoryId(), request.limitAmount(), request.month(), request.year());
         
         BudgetResponse response = new BudgetResponse(
                 budget.getId(),
@@ -58,11 +57,10 @@ public class BudgetController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<BudgetResponse>> updateBudget(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBudgetRequest request) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        Budget budget = budgetService.updateBudget(userId, id, request.limitAmount());
+        Budget budget = budgetService.updateBudget(userDetails.getId(), id, request.limitAmount());
         
         BudgetResponse response = new BudgetResponse(
                 budget.getId(),
@@ -77,10 +75,9 @@ public class BudgetController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBudget(
-            @RequestHeader("Authorization") String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id) {
-        UUID userId = jwtProvider.extractUserId(token.substring(7));
-        budgetService.deleteBudget(userId, id);
+        budgetService.deleteBudget(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }
 }

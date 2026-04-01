@@ -55,11 +55,34 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
     BigDecimal sumByCategoryAndPeriod(@Param("userId") UUID userId, @Param("categoryId") UUID categoryId, @Param("month") int month, @Param("year") int year);
 
+    @Query("SELECT t.category.name, SUM(t.amount) FROM Transaction t " +
+            "WHERE t.user.id = :userId AND t.type = 'EXPENSE' " +
+            "AND (:from IS NULL OR t.date >= :from) " +
+            "AND (:to IS NULL OR t.date <= :to) " +
+            "GROUP BY t.category.name")
+    List<Object[]> sumByCategory(@Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Query("SELECT FUNCTION('YEAR', t.date) as year, FUNCTION('MONTH', t.date) as month, t.type, SUM(t.amount) FROM Transaction t " +
+            "WHERE t.user.id = :userId " +
+            "AND (:from IS NULL OR t.date >= :from) " +
+            "AND (:to IS NULL OR t.date <= :to) " +
+            "GROUP BY FUNCTION('YEAR', t.date), FUNCTION('MONTH', t.date), t.type " +
+            "ORDER BY year DESC, month DESC")
+    List<Object[]> sumByMonth(@Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Query("SELECT t.date, t.type, SUM(t.amount) FROM Transaction t " +
+            "WHERE t.user.id = :userId " +
+            "AND (:from IS NULL OR t.date >= :from) " +
+            "AND (:to IS NULL OR t.date <= :to) " +
+            "GROUP BY t.date, t.type " +
+            "ORDER BY t.date ASC")
+    List<Object[]> sumByDay(@Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     @Query("""
 SELECT t FROM Transaction t
 WHERE t.user.id = :userId
 AND t.type = 'EXPENSE'
 AND t.date >= :startDate
 """)
-    List<Transaction> findLast90Days(UUID userId, LocalDate startDate);
+    List<Transaction> findLast90Days(@Param("userId") UUID userId, @Param("startDate") LocalDate startDate);
 }

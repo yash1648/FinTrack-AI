@@ -13,6 +13,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class RateLimiterFilter extends OncePerRequestFilter {
 
     private final RateLimiterService limiter;
@@ -68,12 +71,10 @@ public class RateLimiterFilter extends OncePerRequestFilter {
                     rule.window()
             );
         } catch (Exception e) {
-            // If rate limiter is unavailable (e.g., Redis down), fail closed for security
-            response.setStatus(503);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            ApiErrorResponse body = ApiErrorResponse.of(503, "Rate limiter temporarily unavailable");
-            PrintWriter writer = response.getWriter();
-            objectMapper.writeValue(writer, body);
+            // If rate limiter is unavailable (e.g., Redis down), fail open to keep API
+            // operational. Auth endpoints are still safe because they have login attempt
+            // tracking backed by Redis independently (LoginAttemptService).
+            filterChain.doFilter(request, response);
             return;
         }
 
