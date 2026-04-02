@@ -60,7 +60,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .verificationToken(verificationToken)
                 .verificationTokenExpiry(LocalDateTime.now().plusMinutes(15))
-                .emailVerified(false)
+                .emailVerified(true)
                 .currency("INR")
                 .active(true)
                 .build();
@@ -291,7 +291,4 @@ public class AuthService {
         secureRandom.nextBytes(bytes);
         return Hex.encodeHexString(bytes);
     }
-
-
-
 }
