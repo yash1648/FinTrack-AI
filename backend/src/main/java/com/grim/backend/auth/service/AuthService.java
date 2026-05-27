@@ -92,10 +92,16 @@ public class AuthService {
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid or expired verification token"));
 
+        // Token already used (null after first verification)
+        if (user.isEmailVerified()) {
+            throw new IllegalArgumentException("Email is already verified");
+        }
+
         if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Verification token has expired");
         }
 
+        // Single-use: clear the token immediately so it cannot be replayed
         user.setEmailVerified(true);
         user.setVerificationToken(null);
         user.setVerificationTokenExpiry(null);
@@ -141,7 +147,7 @@ public class AuthService {
         passwordResetTokenRepository.save(token);
 
         // Invalidate all refresh tokens for security on password reset
-        refreshTokenRepository.deleteAll(user.getRefreshTokens());
+        refreshTokenRepository.deleteByUserId(user.getId());
     }
 
     @Transactional
@@ -183,8 +189,8 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
 
-        // Optionally invalidate all refresh tokens on password change
-        refreshTokenRepository.deleteAll(user.getRefreshTokens());
+        // Invalidate all refresh tokens on password change for security
+        refreshTokenRepository.deleteByUserId(user.getId());
     }
 
     @Transactional
@@ -243,8 +249,10 @@ public class AuthService {
         }
 
         String tokenHash = DigestUtils.sha256Hex(refreshToken);
+
+        // Use pessimistic write lock to prevent race conditions during token rotation
         RefreshToken token = refreshTokenRepository
-                .findByTokenHash(tokenHash)
+                .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Invalid refresh token"));
 
@@ -254,14 +262,15 @@ public class AuthService {
         }
 
         User user = token.getUser();
-        
+
         // Token Rotation: Delete old token and issue a new one
         refreshTokenRepository.delete(token);
+        refreshTokenRepository.flush(); // Ensure the delete is visible before insert
 
         String newAccessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
         String newRefreshTokenValue = generateRandomToken();
         String newTokenHash = DigestUtils.sha256Hex(newRefreshTokenValue);
-        
+
         RefreshToken newToken = RefreshToken.builder()
                 .user(user)
                 .tokenHash(newTokenHash)

@@ -28,6 +28,12 @@ public final class RateLimiterPolicies {
             RateLimitScope.IP
     );
 
+    private static final RateLimitRule AUTH_RESET_PASSWORD = new RateLimitRule(
+            5,
+            Duration.ofHours(1),
+            RateLimitScope.IP
+    );
+
     private static final RateLimitRule NLP_PARSE = new RateLimitRule(
             30,
             Duration.ofHours(1),
@@ -50,6 +56,7 @@ public final class RateLimiterPolicies {
             key("POST", API_PREFIX + "/auth/login"), AUTH_LOGIN,
             key("POST", API_PREFIX + "/auth/register"), AUTH_REGISTER,
             key("POST", API_PREFIX + "/auth/forgot-password"), AUTH_FORGOT_PASSWORD,
+            key("POST", API_PREFIX + "/auth/reset-password"), AUTH_RESET_PASSWORD,
             key("POST", API_PREFIX + "/nlp/parse"), NLP_PARSE,
             key("GET", API_PREFIX + "/analysis/insights"), ANALYSIS_INSIGHTS
     );

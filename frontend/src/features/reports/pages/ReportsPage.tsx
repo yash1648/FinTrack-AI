@@ -57,9 +57,9 @@ const ReportsPage: React.FC = () => {
 
   const isLoading = isDistLoading || isMonthlyLoading || isDailyLoading;
 
-  const distribution = distributionData?.data || [];
-  const monthly = monthlyData?.data || [];
-  const daily = dailyData?.data || [];
+  const distribution = distributionData || [];
+  const monthly = monthlyData || [];
+  const daily = dailyData || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
@@ -213,7 +213,7 @@ const ReportsPage: React.FC = () => {
                         dataKey="amount"
                         nameKey="category"
                       >
-                        {distribution.map((entry, index) => (
+                        {distribution.map((_entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>

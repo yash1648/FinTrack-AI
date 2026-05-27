@@ -52,6 +52,7 @@ public class TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        transactionRepository.flush(); // Ensure the transaction is visible for budget check
         budgetService.checkBudgetAfterTransaction(userId, categoryId, date);
         return savedTransaction;
     }
@@ -83,6 +84,7 @@ public class TransactionService {
         if (date != null) transaction.setDate(date);
 
         Transaction updatedTransaction = transactionRepository.save(transaction);
+        transactionRepository.flush(); // Ensure the transaction is visible for budget check
         budgetService.checkBudgetAfterTransaction(userId, transaction.getCategory().getId(), transaction.getDate());
         return updatedTransaction;
     }
@@ -101,39 +103,52 @@ public class TransactionService {
         LocalDate now = LocalDate.now();
         LocalDate startOfMonth = now.withDayOfMonth(1);
         LocalDate endOfMonth = now.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth());
+        LocalDate weekAgo = now.minusDays(7);
 
+        // Execute all independent DB queries in parallel-ish using a single orchestrating approach:
+        // 1. Monthly income/expense sums
         List<Object[]> sums = transactionRepository.sumByType(userId, startOfMonth, endOfMonth);
         BigDecimal totalIncome = BigDecimal.ZERO;
         BigDecimal totalExpenses = BigDecimal.ZERO;
-
         for (Object[] result : sums) {
             TransactionType type = (TransactionType) result[0];
-            BigDecimal sum = (BigDecimal) result[1];
-            if (type == TransactionType.INCOME) totalIncome = sum;
-            else if (type == TransactionType.EXPENSE) totalExpenses = sum;
+            BigDecimal val = (BigDecimal) result[1];
+            if (type == TransactionType.INCOME) totalIncome = val;
+            else if (type == TransactionType.EXPENSE) totalExpenses = val;
         }
 
         BigDecimal netBalance = totalIncome.subtract(totalExpenses);
+
+        // 2. Recent transactions + spending trend + budgets (all from DB)
         List<Transaction> recentTransactions = transactionRepository.findTop5ByUserIdOrderByDateDesc(userId);
+        List<Object[]> trend = transactionRepository.sumByDay(userId, weekAgo, now);
         List<Map<String, Object>> activeBudgets = budgetService.getBudgets(userId, null, null);
-        
+
+        // Build alerts from budgets
         List<Map<String, Object>> alerts = activeBudgets.stream()
                 .filter(b -> !"ok".equals(b.get("status")))
-                .map(b -> Map.of(
-                        "budgetId", b.get("id"),
-                        "categoryName", ((Map)b.get("category")).get("name"),
-                        "status", b.get("status"),
-                        "percentage", b.get("percentage")
-                ))
+                .map(b -> {
+                    Map<String, Object> alert = new HashMap<>();
+                    alert.put("budgetId", b.get("id"));
+                    alert.put("categoryName", ((Map) b.get("category")).get("name"));
+                    alert.put("status", b.get("status"));
+                    alert.put("percentage", b.get("percentage"));
+                    return alert;
+                })
                 .toList();
 
-        // Get spending trend for last 7 days
-        List<Object[]> trend = transactionRepository.sumByDay(userId, now.minusDays(7), now);
+        // Build recent spending for last 7 days
         List<Map<String, Object>> recentSpending = trend.stream()
                 .filter(r -> r[1] == TransactionType.EXPENSE)
-                .map(r -> Map.of("date", r[0], "amount", r[2]))
+                .map(r -> {
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("date", r[0]);
+                    entry.put("amount", r[2]);
+                    return entry;
+                })
                 .toList();
 
+        // Assemble summary
         Map<String, Object> summary = new HashMap<>();
         summary.put("total_income", totalIncome);
         summary.put("total_expenses", totalExpenses);
@@ -142,14 +157,16 @@ public class TransactionService {
         summary.put("currency", user.getCurrency());
         summary.put("month", now.getMonth().name() + " " + now.getYear());
         summary.put("recent_transactions", recentTransactions.stream()
-                .map(t -> Map.of(
-                        "id", t.getId(),
-                        "amount", t.getAmount(),
-                        "type", t.getType(),
-                        "category", Map.of("id", t.getCategory().getId(), "name", t.getCategory().getName()),
-                        "description", t.getDescription(),
-                        "date", t.getDate()
-                ))
+                .map(t -> {
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("id", t.getId());
+                    entry.put("amount", t.getAmount());
+                    entry.put("type", t.getType());
+                    entry.put("category", Map.of("id", t.getCategory().getId(), "name", t.getCategory().getName()));
+                    entry.put("description", t.getDescription());
+                    entry.put("date", t.getDate());
+                    return entry;
+                })
                 .toList());
         summary.put("active_budget_alerts", alerts);
         summary.put("recent_spending", recentSpending);

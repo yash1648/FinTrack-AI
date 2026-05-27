@@ -1,31 +1,52 @@
 import apiClient from './client';
+import type {
+  ApiResponse,
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  RefreshTokenRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  ChangePasswordRequest,
+  UpdateProfileRequest,
+  UserDto,
+  MessageResponse,
+} from './types';
 
 export const authApi = {
-  login: async (data: any) => {
+  login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
     return apiClient.post('/auth/login', data);
   },
-  register: async (data: any) => {
+
+  register: async (data: RegisterRequest): Promise<ApiResponse<MessageResponse>> => {
     return apiClient.post('/auth/register', data);
   },
-  logout: async (refreshToken: string) => {
-    return apiClient.post('/auth/logout', { refreshToken });
+
+  logout: async (refreshToken: string): Promise<ApiResponse<MessageResponse>> => {
+    return apiClient.post('/auth/logout', { refreshToken } as RefreshTokenRequest);
   },
-  getProfile: async () => {
+
+  getProfile: async (): Promise<ApiResponse<UserDto>> => {
     return apiClient.get('/auth/profile');
   },
-  updateProfile: async (data: any) => {
+
+  updateProfile: async (data: UpdateProfileRequest): Promise<ApiResponse<UserDto>> => {
     return apiClient.patch('/auth/profile', data);
   },
-  changePassword: async (data: any) => {
+
+  changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<MessageResponse>> => {
     return apiClient.patch('/auth/change-password', data);
   },
-  forgotPassword: async (email: string) => {
-    return apiClient.post('/auth/forgot-password', { email });
+
+  forgotPassword: async (email: string): Promise<ApiResponse<MessageResponse>> => {
+    return apiClient.post('/auth/forgot-password', { email } as ForgotPasswordRequest);
   },
-  resetPassword: async (data: any) => {
+
+  resetPassword: async (data: ResetPasswordRequest): Promise<ApiResponse<MessageResponse>> => {
     return apiClient.post('/auth/reset-password', data);
   },
-  verifyEmail: async (token: string) => {
-    return apiClient.get(`/auth/verify-email?token=${token}`);
+
+  verifyEmail: async (token: string): Promise<ApiResponse<MessageResponse>> => {
+    return apiClient.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
   },
 };

@@ -1,0 +1,170 @@
+# =============================================================================
+# FinTrack AI — Production Profile Configuration
+# Activate with: --spring.profiles.active=prod or SPRING_PROFILES_ACTIVE=prod
+# =============================================================================
+
+spring:
+  # ── Flyway (schema management, NOT Hibernate DDL) ─────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-disabled: true
+    baseline-on-migrate: true
+
+  # ── PostgreSQL Datasource ──────────────────────────────────────────────────
+  datasource:
+    url: ${DB_URL}
+    driverClassName: ${DB_CLASS:org.postgresql.Driver}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 1200000
+      pool-name: FintrackPool
+      connection-test-query: SELECT 1
+
+  # ── JPA / Hibernate ───────────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: validate        # NEVER create-drop in production!
+    show-sql: false              # Disable SQL logging in production
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        cache:
+          use_second_level_cache: false
+
+  # ── H2 (DISABLED in production) ───────────────────────────────────────────
+  h2:
+    console:
+      enabled: false
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # ── Mail ───────────────────────────────────────────────────────────────────
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # ── Jackson ────────────────────────────────────────────────────────────────
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+  # ── Cache ──────────────────────────────────────────────────────────────────
+  cache:
+    redis:
+      time-to-live: 3600s
+      cache-null-values: false
+      use-key-prefix: true
+
+# ── Server ────────────────────────────────────────────────────────────────────
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 2048
+  tomcat:
+    max-connections: 200
+    threads:
+      max: 50
+      min-spare: 10
+    connection-timeout: 10000
+    accept-count: 50
+
+# ── JWT ───────────────────────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:900}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
+
+# ── NLP / Ollama ──────────────────────────────────────────────────────────────
+nlp:
+  ollama:
+    timeout-seconds: 30
+    enabled: true
+  fallback:
+    enabled: true
+  prefilter:
+    min-text-length: 3
+    max-text-length: 500
+
+# ── App ───────────────────────────────────────────────────────────────────────
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
+# ── Actuator (health checks, metrics) ────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+    env:
+      enabled: false          # Hide env in production
+  info:
+    env:
+      enabled: true
+  metrics:
+    export:
+      enabled: false          # Disable metrics export unless using Prometheus
+
+info:
+  app:
+    name: FinTrack AI
+    version: 1.0.0
+    environment: production
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging:
+  level:
+    root: WARN
+    com.grim: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /app/logs/application.log
+    max-size: 10MB
+    max-history: 7

@@ -1,0 +1,46 @@
+# =============================================================================
+# FinTrack AI — Development Docker Compose Overlay
+# Overrides production config for local development with hot-reload
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# =============================================================================
+
+services:
+  # ── Backend (with live reload via spring-devtools) ──────────────────────────
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JAVA_OPTS: >-
+        -XX:+UseZGC
+        -XX:MaxRAMPercentage=75.0
+        -Djava.security.egd=file:/dev/./urandom
+        -Dspring.devtools.restart.enabled=true
+    volumes:
+      - ./backend/src:/app/src:ro
+      - backend_logs:/app/logs
+    ports:
+      - "5005:5005"   # Remote debug port
+    environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+
+  # ── Frontend (Vite dev server with HMR) ────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"   # Vite dev server
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+    environment:
+      - VITE_API_URL=/api/v1
+      - CHOKIDAR_USEPOLLING=true
+
+  # ── Ollama (with CPU-only for dev) ─────────────────────────────────────────
+  ollama:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G

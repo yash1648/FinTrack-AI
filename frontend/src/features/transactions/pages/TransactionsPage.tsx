@@ -84,7 +84,7 @@ const TransactionsPage: React.FC = () => {
     setPage(1); // Reset to first page on filter change
   };
 
-  const transactions = transactionsData?.data || [];
+  const transactions = transactionsData || [];
   const pagination = transactionsData?.pagination || { page: 1, totalPages: 1 };
   const categories = categoriesData?.data || [];
 

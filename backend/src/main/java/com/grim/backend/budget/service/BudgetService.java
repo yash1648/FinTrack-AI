@@ -21,9 +21,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,11 +75,24 @@ public class BudgetService {
         }
 
         List<Budget> budgets = budgetRepository.findByUserAndPeriod(userId, targetMonth, targetYear);
-        List<Map<String, Object>> enrichedBudgets = new ArrayList<>();
+        if (budgets.isEmpty()) {
+            return List.of();
+        }
 
+        // Batch fetch spent amounts for all budgets in a single query (eliminates N+1)
+        List<UUID> categoryIds = budgets.stream()
+                .map(b -> b.getCategory().getId())
+                .toList();
+        List<Object[]> spentRows = transactionRepository.sumByCategoriesAndPeriod(userId, categoryIds, targetMonth, targetYear);
+        Map<UUID, BigDecimal> spentByCategory = new HashMap<>();
+        for (Object[] row : spentRows) {
+            spentByCategory.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+
+        List<Map<String, Object>> enrichedBudgets = new ArrayList<>();
         for (Budget budget : budgets) {
-            BigDecimal spent = transactionRepository.sumByCategoryAndPeriod(userId, budget.getCategory().getId(), targetMonth, targetYear);
-            if (spent == null) spent = BigDecimal.ZERO;
+            UUID catId = budget.getCategory().getId();
+            BigDecimal spent = spentByCategory.getOrDefault(catId, BigDecimal.ZERO);
 
             BigDecimal limitAmount = budget.getLimitAmount();
             BigDecimal percentage = limitAmount.compareTo(BigDecimal.ZERO) > 0
@@ -87,17 +102,17 @@ public class BudgetService {
             if (percentage.compareTo(new BigDecimal(100)) >= 0) status = "exceeded";
             else if (percentage.compareTo(new BigDecimal(80)) >= 0) status = "warning";
 
-            enrichedBudgets.add(Map.of(
-                    "id", budget.getId(),
-                    "category", Map.of("id", budget.getCategory().getId(), "name", budget.getCategory().getName()),
-                    "limit_amount", limitAmount,
-                    "spent", spent,
-                    "remaining", limitAmount.subtract(spent),
-                    "percentage", percentage,
-                    "status", status,
-                    "month", budget.getMonth(),
-                    "year", budget.getYear()
-            ));
+            Map<String, Object> enriched = new HashMap<>();
+            enriched.put("id", budget.getId());
+            enriched.put("category", Map.of("id", catId, "name", budget.getCategory().getName()));
+            enriched.put("limit_amount", limitAmount);
+            enriched.put("spent", spent);
+            enriched.put("remaining", limitAmount.subtract(spent));
+            enriched.put("percentage", percentage);
+            enriched.put("status", status);
+            enriched.put("month", budget.getMonth());
+            enriched.put("year", budget.getYear());
+            enrichedBudgets.add(enriched);
         }
 
         return enrichedBudgets;

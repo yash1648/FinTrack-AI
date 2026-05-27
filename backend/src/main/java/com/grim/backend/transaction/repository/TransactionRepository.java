@@ -55,6 +55,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
     BigDecimal sumByCategoryAndPeriod(@Param("userId") UUID userId, @Param("categoryId") UUID categoryId, @Param("month") int month, @Param("year") int year);
 
+    @Query("SELECT t.category.id AS categoryId, SUM(t.amount) AS totalSpent FROM Transaction t " +
+            "WHERE t.user.id = :userId AND t.type = 'EXPENSE' " +
+            "AND MONTH(t.date) = :month AND YEAR(t.date) = :year " +
+            "AND t.category.id IN :categoryIds " +
+            "GROUP BY t.category.id")
+    List<Object[]> sumByCategoriesAndPeriod(@Param("userId") UUID userId,
+                                            @Param("categoryIds") List<UUID> categoryIds,
+                                            @Param("month") int month,
+                                            @Param("year") int year);
+
     @Query("SELECT t.category.name, SUM(t.amount) FROM Transaction t " +
             "WHERE t.user.id = :userId AND t.type = 'EXPENSE' " +
             "AND (:from IS NULL OR t.date >= :from) " +

@@ -1,54 +1,272 @@
 name: fintrack-ai
 
-services:
-  backend:
-    build: .
-    container_name: fintrack-backend
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      - SERVER_PORT=8080
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - MAIL_HOST=${MAIL_HOST}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION:-900000}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-86400000}
-      - DB_URL=jdbc:h2:mem:testdb
-      - DB_USERNAME=sa
-      - DB_PASSWORD=
-      - DB_CLASS=org.h2.Driver
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_CHAT_MODEL=${OLLAMA_CHAT_MODEL:-dolphin-phi}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-    depends_on:
-      - redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+# =============================================================================
+# FinTrack AI — Production-Grade Docker Compose
+# Usage: docker compose --env-file .env up -d
+# =============================================================================
 
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-healthcheck-backend: &healthcheck-backend
+  test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 60s
+
+x-healthcheck-postgres: &healthcheck-postgres
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fintrack} -d ${POSTGRES_DB:-fintrack}"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+
+x-healthcheck-redis: &healthcheck-redis
+  test: ["CMD", "redis-cli", "ping"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+x-restart: &restart-policy
+  restart: unless-stopped
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Primary Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: fintrack-postgres
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fintrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-fintrack}
+      PGSSLMODE: ${PGSSLMODE:-disable}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/migration:/docker-entrypoint-initdb.d/init-scripts:ro
+    healthcheck: *healthcheck-postgres
+    networks:
+      - fintrack-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Redis — Cache / Rate Limiter / Session Store
+  # ---------------------------------------------------------------------------
   redis:
-    image: redis:7.0-alpine
-    container_name: redis-server
-    restart: always
+    image: redis:7.4-alpine
+    container_name: fintrack-redis
+    <<: *restart-policy
+    logging: *default-logging
     ports:
       - "6379:6379"
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     command: >
       sh -c "
-      if [ -z \"$REDIS_PASSWORD\" ]; then
-        redis-server
-      else
-        redis-server --requirepass $REDIS_PASSWORD
-      fi
+        set -e
+        if [ -z \"${REDIS_PASSWORD}\" ]; then
+          echo 'WARNING: REDIS_PASSWORD not set. Running without auth.' >&2
+          redis-server --appendonly yes
+        else
+          redis-server --appendonly yes --requirepass \"${REDIS_PASSWORD}\"
+        fi
       "
     volumes:
       - redis_data:/data
+    healthcheck: *healthcheck-redis
+    networks:
+      - fintrack-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.2"
+          memory: 128M
 
+  # ---------------------------------------------------------------------------
+  # Ollama — Local LLM for NLP / Analysis
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:0.5.7
+    container_name: fintrack-ollama
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: "0.0.0.0"
+      OLLAMA_KEEP_ALIVE: "5m"
+      OLLAMA_NUM_PARALLEL: "2"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - fintrack-net
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+        reservations:
+          cpus: "2.0"
+          memory: 4G
+
+  # ---------------------------------------------------------------------------
+  # Backend — Spring Boot API
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_PROFILE=${MAVEN_PROFILE:-production}
+    container_name: fintrack-backend
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "8080:8080"
+    environment:
+      # Server
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+
+      # Database
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-fintrack}
+      DB_USERNAME: ${POSTGRES_USER:-fintrack}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DB_CLASS: org.postgresql.Driver
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-900000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-86400000}
+
+      # Mail
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+
+      # Ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-dolphin-phi}
+
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+
+      # Java / JVM
+      JAVA_OPTS: >-
+        -XX:+UseZGC
+        -XX:MaxRAMPercentage=75.0
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/app/logs/heapdump.hprof
+        -Djava.security.egd=file:/dev/./urandom
+        -Dnetworkaddress.cache.ttl=60
+    volumes:
+      - backend_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck: *healthcheck-backend
+    networks:
+      - fintrack-net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Frontend — React SPA served by Nginx
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    container_name: fintrack-frontend
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fintrack-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
+  postgres_data:
+    driver: local
+    name: fintrack-postgres-data
   redis_data:
+    driver: local
+    name: fintrack-redis-data
+  ollama_data:
+    driver: local
+    name: fintrack-ollama-data
+  backend_logs:
+    driver: local
+    name: fintrack-backend-logs
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  fintrack-net:
+    driver: bridge
+    name: fintrack-net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

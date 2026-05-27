@@ -38,7 +38,7 @@ public class TransactionController {
             @Valid @RequestBody CreateTransactionRequest request) {
         Transaction transaction = transactionService.createTransaction(
                 userDetails.getId(), request.amount(), request.type(), request.categoryId(), request.description(), request.date());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(true, mapToResponse(transaction)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(true, mapToResponse(transaction, userDetails.getId())));
     }
 
     @GetMapping
@@ -54,11 +54,12 @@ public class TransactionController {
             @RequestParam(required = false) BigDecimal max_amount,
             @RequestParam(required = false) String search) {
         
+        UUID userId = userDetails.getId();
         Page<Transaction> transactionPage = transactionService.getTransactions(
-                userDetails.getId(), from, to, type, category_id, min_amount, max_amount, search, page, limit);
+                userId, from, to, type, category_id, min_amount, max_amount, search, page, limit);
         
         List<TransactionResponse> data = transactionPage.getContent().stream()
-                .map(this::mapToResponse)
+                .map(t -> mapToResponse(t, userId))
                 .collect(Collectors.toList());
         
         PaginationDto pagination = new PaginationDto(
@@ -76,7 +77,7 @@ public class TransactionController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id) {
         Transaction transaction = transactionService.getTransactionById(userDetails.getId(), id);
-        return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction)));
+        return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction, userDetails.getId())));
     }
 
     @PatchMapping("/{id}")
@@ -86,7 +87,7 @@ public class TransactionController {
             @Valid @RequestBody UpdateTransactionRequest request) {
         Transaction transaction = transactionService.updateTransaction(
                 userDetails.getId(), id, request.amount(), request.type(), request.categoryId(), request.description(), request.date());
-        return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction)));
+        return ResponseEntity.ok(new ApiResponse<>(true, mapToResponse(transaction, userDetails.getId())));
     }
 
     @DeleteMapping("/{id}")
@@ -97,10 +98,10 @@ public class TransactionController {
         return ResponseEntity.noContent().build();
     }
 
-    private TransactionResponse mapToResponse(Transaction t) {
+    private TransactionResponse mapToResponse(Transaction t, UUID userId) {
         return new TransactionResponse(
                 t.getId(),
-                t.getUser().getId(),
+                userId,
                 t.getAmount(),
                 t.getType(),
                 new CategoryResponse(t.getCategory().getId(), t.getCategory().getName(), t.getCategory().isDefault()),

@@ -1,28 +1,76 @@
-# Stage 1: Build
+# =============================================================================
+# FinTrack AI — Backend Dockerfile (Multi-stage, Production)
+# =============================================================================
+
+# ── Build Stage ────────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jdk-alpine AS build
+
 WORKDIR /app
 
-# Copy the maven wrapper and pom file
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Copy Maven wrapper and project files
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Download dependencies (this layer will be cached)
-RUN ./mvnw dependency:go-offline -B
+# Make mvnw executable
+RUN chmod +x mvnw
 
-# Copy the source code and build the application
+# Download dependencies (layer is cached unless pom.xml changes)
+RUN ./mvnw dependency:go-offline -B -q
+
+# Copy source and build
 COPY src src
-RUN ./mvnw package -DskipTests
 
-# Stage 2: Runtime
+# Build with optimizations
+RUN ./mvnw package \
+    -DskipTests \
+    -Dcheckstyle.skip \
+    -q \
+    --no-transfer-progress
+
+# Extract layers for efficient Docker caching (Spring Boot layered JAR)
+RUN java -Djarmode=layertools -jar target/*.jar extract --destination extracted
+
+# ── Runtime Stage ──────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
+
+# Add non-root user
+RUN addgroup -S fintrack && \
+    adduser -S -G fintrack fintrack && \
+    apk add --no-cache curl tzdata
+
 WORKDIR /app
 
-# Copy the jar from the build stage
-COPY --from=build /app/target/*.jar app.jar
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R fintrack:fintrack /app/logs
 
-# Expose the application port
+# Copy extracted layers from build stage (optimized layer caching)
+COPY --from=build --chown=fintrack:fintrack /app/extracted/dependencies/ ./
+COPY --from=build --chown=fintrack:fintrack /app/extracted/spring-boot-loader/ ./
+COPY --from=build --chown=fintrack:fintrack /app/extracted/snapshot-dependencies/ ./
+COPY --from=build --chown=fintrack:fintrack /app/extracted/application/ ./
+
+# Expose application port
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Switch to non-root user
+USER fintrack
+
+# JVM optimized for containerized environments
+ENTRYPOINT ["sh", "-c", "java \
+    ${JAVA_OPTS:-} \
+    -XX:+UseZGC \
+    -XX:MaxRAMPercentage=75.0 \
+    -XX:+ExitOnOutOfMemoryError \
+    -XX:+HeapDumpOnOutOfMemoryError \
+    -XX:HeapDumpPath=/app/logs/heapdump.hprof \
+    -Djava.security.egd=file:/dev/./urandom \
+    -Dnetworkaddress.cache.ttl=60 \
+    -jar org.springframework.boot.loader.launch.JarLauncher"]
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
+    CMD curl -sf http://localhost:8080/actuator/health || exit 1

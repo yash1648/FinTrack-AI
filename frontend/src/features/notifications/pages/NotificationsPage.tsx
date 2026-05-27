@@ -51,7 +51,7 @@ const NotificationsPage: React.FC = () => {
     markAllReadMutation.mutate();
   };
 
-  const notifications = notificationsData?.data || [];
+  const notifications = notificationsData || [];
   const pagination = notificationsData?.pagination || { page: 1, totalPages: 1 };
 
   const getIcon = (type: string) => {
