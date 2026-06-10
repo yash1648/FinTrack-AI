@@ -45,9 +45,9 @@ const InsightsPage: React.FC = () => {
     );
   }
 
-  const insights = insightsData?.data || {};
-  const anomalies = anomaliesData?.data || [];
-  const projection = projectionData?.data || {};
+  const insights: any = insightsData?.data || {};
+  const anomalies: any[] = anomaliesData?.data || [];
+  const projection: any = projectionData?.data || {};
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

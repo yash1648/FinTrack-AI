@@ -57,9 +57,9 @@ const ReportsPage: React.FC = () => {
 
   const isLoading = isDistLoading || isMonthlyLoading || isDailyLoading;
 
-  const distribution = distributionData || [];
-  const monthly = monthlyData || [];
-  const daily = dailyData || [];
+  const distribution = distributionData?.data || [];
+  const monthly = monthlyData?.data || [];
+  const daily = dailyData?.data || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">

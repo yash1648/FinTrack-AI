@@ -15,7 +15,7 @@ import java.util.stream.StreamSupport;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OllamaAnalysisClient {
+public class NimAnalysisClient {
 
     private final ChatClient chatClient;
     private final ObjectMapper mapper;
@@ -29,7 +29,7 @@ public class OllamaAnalysisClient {
                     .call()
                     .content();
         } catch (Exception e) {
-            log.warn("Failed to call Ollama for analysis: {}", e.getMessage());
+            log.warn("Failed to call NIM for analysis: {}", e.getMessage());
             return new AiInsightResult(Collections.emptyList(), Collections.emptyList());
         }
 

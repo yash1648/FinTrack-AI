@@ -14,13 +14,12 @@ services:
         -XX:MaxRAMPercentage=75.0
         -Djava.security.egd=file:/dev/./urandom
         -Dspring.devtools.restart.enabled=true
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
     volumes:
       - ./backend/src:/app/src:ro
       - backend_logs:/app/logs
     ports:
       - "5005:5005"   # Remote debug port
-    environment:
-      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
 
   # ── Frontend (Vite dev server with HMR) ────────────────────────────────────
   frontend:
@@ -37,10 +36,3 @@ services:
       - VITE_API_URL=/api/v1
       - CHOKIDAR_USEPOLLING=true
 
-  # ── Ollama (with CPU-only for dev) ─────────────────────────────────────────
-  ollama:
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 4G

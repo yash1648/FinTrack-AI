@@ -5,7 +5,7 @@ spring:
     enabled: true
     locations: classpath:db/migration
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:testdb}
+    url: ${DB_URL:jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
     driverClassName: ${DB_CLASS:org.h2.Driver}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
@@ -27,8 +27,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -39,11 +39,12 @@ spring:
     import: optional:file:.env[.properties]
 
   ai:
-    ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    openai:
+      base-url: ${NVIDIA_BASE_URL:https://integrate.api.nvidia.com/v1}
+      api-key: ${NVIDIA_API_KEY:dummy-key}
       chat:
-        model: ${OLLAMA_CHAT_MODEL:dolphin-phi}
         options:
+          model: ${NIM_CHAT_MODEL:meta/llama-3.1-8b-instruct}
           temperature: 0.0
   jackson:
     property-naming-strategy: SNAKE_CASE
@@ -70,7 +71,7 @@ jwt:
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
 
 nlp:
-  ollama:
+  nim:
     timeout-seconds: 25
     enabled: true
   fallback:

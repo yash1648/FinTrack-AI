@@ -218,16 +218,6 @@ redis-flush: ## Flush all Redis data
 redis-shell: ## Open Redis CLI
 	docker compose exec redis redis-cli
 
-# ─── Ollama ──────────────────────────────────────────────────────────────────
-
-.PHONY: ollama-pull
-ollama-pull: ## Pull the chat model into Ollama
-	docker compose exec -T ollama ollama pull ${OLLAMA_CHAT_MODEL:-dolphin-phi}
-	@echo "${GREEN}Model pulled.${NC}"
-
-.PHONY: ollama-list
-ollama-list: ## List available Ollama models
-	docker compose exec ollama ollama list
 
 # ─── Secrets ──────────────────────────────────────────────────────────────────
 
@@ -324,7 +314,6 @@ dev: ## Full development setup (install deps + start)
 	$(MAKE) env-example
 	$(MAKE) frontend-install
 	$(MAKE) up-dev
-	$(MAKE) ollama-pull
 	$(MAKE) wait
 	@echo "${GREEN}Development environment ready!${NC}"
 	@echo "  Frontend: ${CYAN}http://localhost:5173${NC}"

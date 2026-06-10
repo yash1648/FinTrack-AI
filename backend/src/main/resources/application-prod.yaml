@@ -79,10 +79,6 @@ spring:
   # ── Jackson ────────────────────────────────────────────────────────────────
   jackson:
     property-naming-strategy: SNAKE_CASE
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
 
   # ── Cache ──────────────────────────────────────────────────────────────────
   cache:
@@ -112,9 +108,9 @@ jwt:
   access-expiration: ${JWT_ACCESS_EXPIRATION:900}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
 
-# ── NLP / Ollama ──────────────────────────────────────────────────────────────
+# ── NLP / NIM ──────────────────────────────────────────────────────────────
 nlp:
-  ollama:
+  nim:
     timeout-seconds: 30
     enabled: true
   fallback:
@@ -140,6 +136,9 @@ management:
       show-components: when-authorized
     env:
       enabled: false          # Hide env in production
+  health:
+    mail:
+      enabled: false          # Disable mail health check (SMTP not configured)
   info:
     env:
       enabled: true

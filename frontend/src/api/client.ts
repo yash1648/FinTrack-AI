@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
 // Maximum number of token refresh retries to prevent infinite loops
@@ -14,7 +14,7 @@ const apiClient = axios.create({
 });
 
 // Track refresh attempts per request
-interface RetryConfig {
+interface RetryConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
   _retryCount?: number;
 }

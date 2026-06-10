@@ -50,6 +50,7 @@ public class SecurityBeanConfig {
                                 "/api/v1/swagger/**",
                                 "/api/v1/swagger-ui/**",
                                 "/api/v1/v3/api-docs/**",
+                                "/actuator/**",
                                 "/ws/**"
                         ).permitAll()
                         .requestMatchers(

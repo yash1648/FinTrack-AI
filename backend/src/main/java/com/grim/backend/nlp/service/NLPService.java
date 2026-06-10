@@ -9,7 +9,7 @@ import com.grim.backend.nlp.dto.ParseResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -72,31 +72,30 @@ public class NLPService {
 
             String response = chatClient.prompt()
                     .user(prompt)
-                    .options(OllamaChatOptions.builder().disableThinking().build())
                     .call()
                     .content();
 
             if (response == null || response.isBlank()) {
                 return tryFallback(userId, trimmed)
                         .map(d -> new ParseResponse(true, d, "validated-fallback"))
-                        .orElseGet(() -> new ParseResponse(false, null, "ollama"));
+                        .orElseGet(() -> new ParseResponse(false, null, "nim"));
             }
 
             JsonNode node = objectMapper.readTree(response);
             DraftTransactionDTO draft = extractDraftFromAi(node, categoriesByLowerName);
             if (draft != null) {
-                return new ParseResponse(true, draft, "validated-ollama");
+                return new ParseResponse(true, draft, "validated-nim");
             }
 
             return tryFallback(userId, trimmed)
                     .map(d -> new ParseResponse(true, d, "validated-fallback"))
-                    .orElseGet(() -> new ParseResponse(false, null, "ollama"));
+                    .orElseGet(() -> new ParseResponse(false, null, "nim"));
 
         } catch (Exception e) {
             log.warn("NLP parse failed safely: {}", e.getMessage());
             return tryFallback(userId, trimmed)
                     .map(d -> new ParseResponse(true, d, "validated-fallback"))
-                    .orElseGet(() -> new ParseResponse(false, null, "ollama"));
+                    .orElseGet(() -> new ParseResponse(false, null, "nim"));
         }
     }
 

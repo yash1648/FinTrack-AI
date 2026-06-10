@@ -24,7 +24,7 @@ const NotificationsPage: React.FC = () => {
 
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['notifications', { page, unreadOnly }],
-    queryFn: () => notificationsApi.getNotifications({ page, limit: 10, unread_only: unreadOnly }),
+    queryFn: () => notificationsApi.getNotifications({ page, limit: 10, unreadOnly }),
   });
 
   const markReadMutation = useMutation({
@@ -51,7 +51,7 @@ const NotificationsPage: React.FC = () => {
     markAllReadMutation.mutate();
   };
 
-  const notifications = notificationsData || [];
+  const notifications = notificationsData?.data || [];
   const pagination = notificationsData?.pagination || { page: 1, totalPages: 1 };
 
   const getIcon = (type: string) => {

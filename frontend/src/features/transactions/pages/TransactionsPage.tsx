@@ -48,7 +48,12 @@ const TransactionsPage: React.FC = () => {
 
   const { data: transactionsData, isLoading } = useQuery({
     queryKey: ['transactions', { page, ...filters }],
-    queryFn: () => transactionsApi.getTransactions({ page, limit: 10, ...filters }),
+    queryFn: () => transactionsApi.getTransactions({ 
+      page, 
+      limit: 10, 
+      ...filters, 
+      type: filters.type ? (filters.type as any) : undefined 
+    }),
   });
 
   const { data: categoriesData } = useQuery({
@@ -84,7 +89,7 @@ const TransactionsPage: React.FC = () => {
     setPage(1); // Reset to first page on filter change
   };
 
-  const transactions = transactionsData || [];
+  const transactions = transactionsData?.data || [];
   const pagination = transactionsData?.pagination || { page: 1, totalPages: 1 };
   const categories = categoriesData?.data || [];
 

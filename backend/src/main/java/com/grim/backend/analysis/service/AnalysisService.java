@@ -1,7 +1,7 @@
 package com.grim.backend.analysis.service;
 
 
-import com.grim.backend.analysis.ai.OllamaAnalysisClient;
+import com.grim.backend.analysis.ai.NimAnalysisClient;
 import com.grim.backend.analysis.common.InsightPromptBuilder;
 import com.grim.backend.analysis.common.SpendingAggregator;
 import com.grim.backend.analysis.dto.AiInsightResult;
@@ -37,7 +37,7 @@ public class AnalysisService {
     private final ProjectionService projectionService;
 
     private final InsightPromptBuilder promptBuilder;
-    private final OllamaAnalysisClient aiClient;
+    private final NimAnalysisClient aiClient;
 
     public InsightData getInsights(UUID userId) {
 

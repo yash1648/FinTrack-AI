@@ -61,10 +61,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   });
 
   const mutation = useMutation({
-    mutationFn: (data: TransactionFormValues) =>
-      isEditing 
-        ? transactionsApi.updateTransaction(transaction.id, data) 
-        : transactionsApi.createTransaction(data),
+    mutationFn: (data: TransactionFormValues) => {
+      const payload = {
+        amount: parseFloat(data.amount),
+        type: data.type,
+        categoryId: data.category_id,
+        description: data.description,
+        date: data.date,
+      };
+      return isEditing 
+        ? transactionsApi.updateTransaction(transaction.id, payload) 
+        : transactionsApi.createTransaction(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

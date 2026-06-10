@@ -279,9 +279,14 @@ const BudgetForm: React.FC<BudgetFormProps> = ({ budget, categories, month, year
     setLoading(true);
     try {
       if (isEditing) {
-        await budgetsApi.updateBudget(budget.id, { limitAmount: formData.limit_amount });
+        await budgetsApi.updateBudget(budget.id, { limitAmount: parseFloat(formData.limit_amount) });
       } else {
-        await budgetsApi.createBudget(formData);
+        await budgetsApi.createBudget({
+          categoryId: formData.category_id,
+          limitAmount: parseFloat(formData.limit_amount),
+          month: formData.month,
+          year: formData.year,
+        });
       }
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

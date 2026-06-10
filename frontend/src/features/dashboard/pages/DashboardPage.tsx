@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/api/dashboard';
+import type { DashboardSummary } from '@/api/types';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import {
@@ -61,7 +62,7 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  const summary = data?.data || {};
+  const summary = data?.data || ({} as Partial<DashboardSummary>);
   const categoryData = Object.entries(summary.categoryBreakdown || {}).map(([name, value]) => ({
     name,
     value,
@@ -161,7 +162,7 @@ const DashboardPage: React.FC = () => {
             </Link>
           </div>
           <div className="flex-1">
-            {summary.recentTransactions?.length > 0 ? (
+            {summary.recentTransactions && summary.recentTransactions.length > 0 ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {summary.recentTransactions.map((tx: any) => (
                   <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -236,14 +237,14 @@ const DashboardPage: React.FC = () => {
       </div>
       
       {/* Budget Alerts */}
-      {summary.budgetAlerts?.length > 0 && (
+      {summary.activeBudgetAlerts && summary.activeBudgetAlerts.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <AlertCircle className="w-6 h-6 text-amber-600" />
             <h3 className="font-bold text-amber-900 dark:text-amber-400">Budget Alerts</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {summary.budgetAlerts.map((alert: any) => (
+            {summary.activeBudgetAlerts.map((alert: any) => (
               <div key={alert.category} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-amber-100 dark:border-amber-900/20">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-bold text-slate-900 dark:text-white">{alert.category}</span>
