@@ -46,9 +46,6 @@ spring:
         options:
           model: ${NIM_CHAT_MODEL:meta/llama-3.1-8b-instruct}
           temperature: 0.0
-  jackson:
-    property-naming-strategy: SNAKE_CASE
-
   cache:
     redis:
       time-to-live: 3600s
@@ -67,8 +64,8 @@ springdoc:
 
 jwt:
     secret: ${JWT_SECRET:this-is-a-very-long-secret-key-for-jwt-authentication-123456}
-    access-expiration: ${JWT_ACCESS_EXPIRATION:900}
-    refresh-expiration: ${JWT_REFRESH_EXPIRATION:86400}
+    access-expiration: ${JWT_ACCESS_EXPIRATION:3600}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800}
 
 nlp:
   nim:

@@ -95,4 +95,12 @@ AND t.type = 'EXPENSE'
 AND t.date >= :startDate
 """)
     List<Transaction> findLast90Days(@Param("userId") UUID userId, @Param("startDate") LocalDate startDate);
+
+    // ─── Report queries ────────────────────────────────────────────────────────
+
+    List<Transaction> findByUserIdAndTypeAndDateBetweenOrderByAmountDesc(
+            UUID userId, TransactionType type, LocalDate from, LocalDate to);
+
+    List<Transaction> findByUserIdAndDateBetweenOrderByDateDesc(
+            UUID userId, LocalDate from, LocalDate to);
 }

@@ -254,6 +254,20 @@ export interface DailyTrend {
   amount: number;
 }
 
+export interface ReportSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  netBalance: number;
+  largestExpense: {
+    amount: number;
+    description: string;
+    date: string;
+  } | null;
+  transactionCount: number;
+  averageDailySpend: number;
+  currency: string;
+}
+
 export interface ReportQueryParams {
   from: string;
   to: string;

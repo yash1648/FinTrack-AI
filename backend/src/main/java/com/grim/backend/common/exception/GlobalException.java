@@ -1,6 +1,7 @@
 package com.grim.backend.common.exception;
 
 import com.grim.backend.auth.dto.ApiErrorResponse;
+import com.grim.backend.auth.dto.FieldErrorDetail;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -82,16 +84,20 @@ public class GlobalException {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult()
+        List<FieldErrorDetail> fields = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(FieldError::getDefaultMessage)
+                .map(e -> new FieldErrorDetail(e.getField(), e.getDefaultMessage()))
+                .toList();
+
+        String message = fields.stream()
+                .map(f -> f.field() + ": " + f.message())
                 .collect(Collectors.joining(", "));
-        
+
         log.warn("Validation failed: {}", message);
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiErrorResponse.of(HttpStatus.BAD_REQUEST.value(), message));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiErrorResponse.of(HttpStatus.UNPROCESSABLE_ENTITY.value(), "Validation failed", fields));
     }
 
     @ExceptionHandler(Exception.class)

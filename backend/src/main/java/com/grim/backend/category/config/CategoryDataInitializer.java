@@ -16,14 +16,15 @@ public class CategoryDataInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
 
+        private static final List<String> DEFAULT_CATEGORIES = List.of(
+            "Food", "Transportation", "Utilities", "Entertainment",
+            "Healthcare", "Education", "Shopping", "Salary",
+            "Freelance", "Investment", "Gifts", "Other", "Uncategorized"
+    );
+
     @Override
     public void run(String... args) {
-        List<String> defaultCategories = List.of(
-                "Food", "Transportation", "Utilities", "Entertainment",
-                "Healthcare", "Education", "Shopping", "Other", "Uncategorized"
-        );
-
-        for (String name : defaultCategories) {
+        for (String name : DEFAULT_CATEGORIES) {
             if (categoryRepository.findByNameAndIsDefaultTrue(name).isEmpty()) {
                 Category category = Category.builder()
                         .name(name)

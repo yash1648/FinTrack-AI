@@ -7,18 +7,20 @@
 -- ---------------
 -- USERS
 -- ---------------
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE users (
-    id          UUID         NOT NULL DEFAULT gen_random_uuid(),
-    name        VARCHAR(100) NOT NULL,
-    email       VARCHAR(255) NOT NULL,
-    password_hash TEXT       NOT NULL,
-    currency    VARCHAR(3)   NOT NULL DEFAULT 'INR',
-    email_verified BOOLEAN   NOT NULL DEFAULT false,
+    id          UUID          NOT NULL DEFAULT gen_random_uuid(),
+    name        VARCHAR(100)  NOT NULL,
+    email       VARCHAR(255)  NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    currency    CHAR(3)       NOT NULL DEFAULT 'INR',
+    email_verified BOOLEAN    NOT NULL DEFAULT false,
     verification_token  VARCHAR(64),
     verification_token_expiry TIMESTAMP,
-    is_active   BOOLEAN      NOT NULL DEFAULT true,
-    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active   BOOLEAN       NOT NULL DEFAULT true,
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_users PRIMARY KEY (id),
     CONSTRAINT uq_users_email UNIQUE (email)
@@ -90,8 +92,8 @@ CREATE TABLE transactions (
     id          UUID            NOT NULL DEFAULT gen_random_uuid(),
     user_id     UUID            NOT NULL,
     category_id UUID            NOT NULL,
-    amount      DECIMAL(15, 2)  NOT NULL,
-    type        VARCHAR(10)     NOT NULL,  -- INCOME | EXPENSE
+    amount      DECIMAL(15, 2)  NOT NULL CHECK (amount > 0),
+    type        VARCHAR(10)     NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
     description VARCHAR(255),
     date        DATE            NOT NULL,
     created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -102,11 +104,18 @@ CREATE TABLE transactions (
     CONSTRAINT fk_transactions_category FOREIGN KEY (category_id) REFERENCES categories (id)   ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_transactions_user       ON transactions (user_id);
-CREATE INDEX idx_transactions_date       ON transactions (date);
-CREATE INDEX idx_transactions_user_date  ON transactions (user_id, date DESC);
-CREATE INDEX idx_transactions_type       ON transactions (type);
-CREATE INDEX idx_transactions_category   ON transactions (category_id);
+CREATE INDEX idx_transactions_user           ON transactions (user_id);
+CREATE INDEX idx_transactions_date           ON transactions (date);
+CREATE INDEX idx_transactions_user_date      ON transactions (user_id, date DESC);
+CREATE INDEX idx_transactions_type           ON transactions (type);
+CREATE INDEX idx_transactions_user_type      ON transactions (user_id, type);
+CREATE INDEX idx_transactions_category       ON transactions (category_id);
+CREATE INDEX idx_transactions_user_category  ON transactions (user_id, category_id);
+
+-- Enable pg_trgm for ILIKE search support
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_transactions_description_trgm
+  ON transactions USING GIN (description gin_trgm_ops);
 
 -- ---------------
 -- BUDGETS
@@ -115,20 +124,20 @@ CREATE TABLE budgets (
     id           UUID           NOT NULL DEFAULT gen_random_uuid(),
     user_id      UUID           NOT NULL,
     category_id  UUID           NOT NULL,
-    limit_amount DECIMAL(15, 2) NOT NULL,
-    budget_month SMALLINT       NOT NULL,
-    budget_year  SMALLINT       NOT NULL,
+    limit_amount DECIMAL(15, 2) NOT NULL CHECK (limit_amount > 0),
+    month        SMALLINT       NOT NULL CHECK (month BETWEEN 1 AND 12),
+    year         SMALLINT       NOT NULL CHECK (year BETWEEN 2000 AND 2100),
     created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_budgets PRIMARY KEY (id),
-    CONSTRAINT uq_budget_user_category_year_month UNIQUE (user_id, category_id, budget_year, budget_month),
+    CONSTRAINT uq_budget_user_category_period UNIQUE (user_id, category_id, month, year),
     CONSTRAINT fk_budgets_user     FOREIGN KEY (user_id)     REFERENCES users (id)      ON DELETE CASCADE,
     CONSTRAINT fk_budgets_category FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_budgets_user         ON budgets (user_id);
-CREATE INDEX idx_budgets_user_period  ON budgets (user_id, budget_year, budget_month);
+CREATE INDEX idx_budgets_user_period  ON budgets (user_id, year, month);
 
 -- ---------------
 -- NOTIFICATIONS
@@ -155,16 +164,16 @@ CREATE INDEX idx_notifications_user_read   ON notifications (user_id, is_read);
 -- Inserted after schema creation so user_id FK resolves (NULL = system category)
 -- ---------------
 INSERT INTO categories (user_id, name, is_default) VALUES
-    (NULL, 'Food & Dining',    true),
-    (NULL, 'Transport',        true),
-    (NULL, 'Shopping',         true),
-    (NULL, 'Entertainment',    true),
-    (NULL, 'Health',           true),
-    (NULL, 'Education',        true),
-    (NULL, 'Housing',          true),
-    (NULL, 'Utilities',        true),
-    (NULL, 'Salary',           true),
-    (NULL, 'Freelance',        true),
-    (NULL, 'Investment',       true),
-    (NULL, 'Gifts',            true),
-    (NULL, 'Other',            true);
+    (NULL, 'Food',            true),
+    (NULL, 'Transportation',  true),
+    (NULL, 'Utilities',       true),
+    (NULL, 'Entertainment',   true),
+    (NULL, 'Healthcare',      true),
+    (NULL, 'Education',       true),
+    (NULL, 'Shopping',        true),
+    (NULL, 'Salary',          true),
+    (NULL, 'Freelance',       true),
+    (NULL, 'Investment',      true),
+    (NULL, 'Gifts',           true),
+    (NULL, 'Other',           true),
+    (NULL, 'Uncategorized',   true);

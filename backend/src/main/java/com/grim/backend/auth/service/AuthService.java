@@ -42,7 +42,7 @@ public class AuthService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
-    public AuthResponse registerUser(RegisterRequest request){
+    public void registerUser(RegisterRequest request){
         if(userRepository.existsByEmail(request.email())){
             throw new ConflictException("Email already exists");
         }
@@ -60,7 +60,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .verificationToken(verificationToken)
                 .verificationTokenExpiry(LocalDateTime.now().plusMinutes(15))
-                .emailVerified(true)
+                .emailVerified(false)
                 .currency("INR")
                 .active(true)
                 .build();
@@ -68,23 +68,6 @@ public class AuthService {
         userRepository.save(user);
 
         emailService.sendVerificationEmail(user.getEmail(), verificationToken);
-
-        String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
-        String refreshTokenValue = generateRandomToken();
-        String tokenHash = DigestUtils.sha256Hex(refreshTokenValue);
-        RefreshToken token = RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .build();
-
-        refreshTokenRepository.save(token);
-
-        return new AuthResponse(
-                accessToken,
-                refreshTokenValue,
-                new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency())
-        );
     }
 
     @Transactional
@@ -242,7 +225,7 @@ public class AuthService {
 
 
     @Transactional
-    public AuthResponse refreshToken(String refreshToken){
+    public AccessTokenResponse refreshToken(String refreshToken){
 
         if (refreshToken == null || refreshToken.isEmpty()) {
             throw new IllegalArgumentException("Refresh token is required");
@@ -279,11 +262,7 @@ public class AuthService {
 
         refreshTokenRepository.save(newToken);
 
-        return new AuthResponse(
-                newAccessToken,
-                newRefreshTokenValue,
-                new UserDto(user.getId(), user.getName(), user.getEmail(), user.getCurrency())
-        );
+        return new AccessTokenResponse(newAccessToken);
     }
 
     @Transactional

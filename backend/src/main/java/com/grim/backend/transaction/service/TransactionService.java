@@ -19,11 +19,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -148,15 +151,15 @@ public class TransactionService {
                 })
                 .toList();
 
-        // Assemble summary
+        // Assemble summary (camelCase keys to match frontend expectations)
         Map<String, Object> summary = new HashMap<>();
-        summary.put("total_income", totalIncome);
-        summary.put("total_expenses", totalExpenses);
+        summary.put("totalIncome", totalIncome);
+        summary.put("totalExpenses", totalExpenses);
         summary.put("balance", netBalance);
         summary.put("savings", totalIncome.subtract(totalExpenses).max(BigDecimal.ZERO));
         summary.put("currency", user.getCurrency());
         summary.put("month", now.getMonth().name() + " " + now.getYear());
-        summary.put("recent_transactions", recentTransactions.stream()
+        summary.put("recentTransactions", recentTransactions.stream()
                 .map(t -> {
                     Map<String, Object> entry = new HashMap<>();
                     entry.put("id", t.getId());
@@ -168,8 +171,8 @@ public class TransactionService {
                     return entry;
                 })
                 .toList());
-        summary.put("active_budget_alerts", alerts);
-        summary.put("recent_spending", recentSpending);
+        summary.put("activeBudgetAlerts", alerts);
+        summary.put("recentSpending", recentSpending);
 
         return summary;
     }
@@ -190,5 +193,78 @@ public class TransactionService {
         return transactionRepository.sumByDay(userId, from, to).stream()
                 .map(r -> Map.of("date", r[0], "type", r[1], "amount", r[2]))
                 .toList();
+    }
+
+    public Map<String, Object> getSummaryStatistics(UUID userId, LocalDate from, LocalDate to) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Object[]> sums = transactionRepository.sumByType(userId, from, to);
+        BigDecimal totalIncome = BigDecimal.ZERO;
+        BigDecimal totalExpenses = BigDecimal.ZERO;
+        for (Object[] row : sums) {
+            TransactionType t = (TransactionType) row[0];
+            BigDecimal v = (BigDecimal) row[1];
+            if (t == TransactionType.INCOME) totalIncome = v;
+            else if (t == TransactionType.EXPENSE) totalExpenses = v;
+        }
+
+        BigDecimal netBalance = totalIncome.subtract(totalExpenses);
+
+        // Find largest single expense
+        List<Transaction> expenseTransactions = transactionRepository
+                .findByUserIdAndTypeAndDateBetweenOrderByAmountDesc(userId, TransactionType.EXPENSE, from, to);
+        Map<String, Object> largestExpense = null;
+        if (!expenseTransactions.isEmpty()) {
+            Transaction max = expenseTransactions.get(0);
+            largestExpense = new HashMap<>();
+            largestExpense.put("amount", max.getAmount());
+            largestExpense.put("description", max.getDescription());
+            largestExpense.put("date", max.getDate());
+        }
+
+        long daysBetween = ChronoUnit.DAYS.between(from, to) + 1;
+        BigDecimal averageDailySpend = daysBetween > 0
+                ? totalExpenses.divide(BigDecimal.valueOf(daysBetween), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        long transactionCount = expenseTransactions.size() +
+                transactionRepository.findByUserIdAndTypeAndDateBetweenOrderByAmountDesc(userId, TransactionType.INCOME, from, to).size();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalIncome", totalIncome);
+        result.put("totalExpenses", totalExpenses);
+        result.put("netBalance", netBalance);
+        result.put("largestExpense", largestExpense);
+        result.put("transactionCount", transactionCount);
+        result.put("averageDailySpend", averageDailySpend);
+        result.put("currency", user.getCurrency());
+        return result;
+    }
+
+    public String exportTransactionsCsv(UUID userId, LocalDate from, LocalDate to) {
+        List<Transaction> transactions = transactionRepository
+                .findByUserIdAndDateBetweenOrderByDateDesc(userId, from, to);
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("Date,Type,Category,Description,Amount\n");
+
+        for (Transaction t : transactions) {
+            csv.append(t.getDate()).append(",");
+            csv.append(t.getType()).append(",");
+            csv.append(t.getCategory().getName()).append(",");
+            csv.append(escapeCsv(t.getDescription())).append(",");
+            csv.append(t.getAmount()).append("\n");
+        }
+
+        return csv.toString();
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

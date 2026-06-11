@@ -30,8 +30,8 @@ export const useWebSocket = () => {
     client.onConnect = (frame) => {
       // console.log('Connected: ' + frame);
       
-      // Subscribe to user-specific notification topic
-      client.subscribe(`/topic/user.${user.id}.notifications`, (message) => {
+      // Subscribe to user-specific notification topic (must match backend push destination)
+      client.subscribe(`/topic/notifications/${user.id}`, (message) => {
         const notification = JSON.parse(message.body);
         
         // Show toast for new notification
@@ -43,7 +43,7 @@ export const useWebSocket = () => {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         
         // If it's a budget alert, also invalidate dashboard and budgets
-        if (notification.type === 'BUDGET_ALERT') {
+        if (notification.type === 'budget_warning' || notification.type === 'budget_exceeded') {
           queryClient.invalidateQueries({ queryKey: ['dashboard'] });
           queryClient.invalidateQueries({ queryKey: ['budgets'] });
         }

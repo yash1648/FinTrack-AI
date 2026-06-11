@@ -105,7 +105,7 @@ public class BudgetService {
             Map<String, Object> enriched = new HashMap<>();
             enriched.put("id", budget.getId());
             enriched.put("category", Map.of("id", catId, "name", budget.getCategory().getName()));
-            enriched.put("limit_amount", limitAmount);
+            enriched.put("limitAmount", limitAmount);
             enriched.put("spent", spent);
             enriched.put("remaining", limitAmount.subtract(spent));
             enriched.put("percentage", percentage);
