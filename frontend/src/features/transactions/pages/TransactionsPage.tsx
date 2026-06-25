@@ -38,11 +38,16 @@ const TransactionsPage: React.FC = () => {
   });
 
   const handleParsed = (draft: any) => {
-    setEditingTransaction({
+    // Normalize NLP draft to match expected form shape (handles both camelCase and snake_case)
+    const categoryId = draft.categoryId || draft.category_id || '';
+    const normalized = {
       ...draft,
       amount: draft.amount?.toString() || '',
       date: draft.date || new Date().toISOString().split('T')[0],
-    });
+      category: draft.category?.id ? draft.category : { id: categoryId },
+      category_id: categoryId,
+    };
+    setEditingTransaction(normalized);
     setIsFormOpen(true);
   };
 

@@ -6,8 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:tauri": "TAURI_BUILD=true VITE_API_URL=http://localhost:8080/api/v1 VITE_WS_URL=http://localhost:8080/ws tsc && vite build",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "lint": "eslint . --report-unused-disable-directives",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -25,6 +33,7 @@
     "@stomp/stompjs": "^7.0.0",
     "@tanstack/react-query": "^5.56.2",
     "@tanstack/react-table": "^8.20.5",
+    "@tauri-apps/api": "^2.11.0",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -44,18 +53,24 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0-alpha.25",
-    "@types/node": "^22.5.5",
+    "@tauri-apps/cli": "^2.11.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.20.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/sockjs-client": "^1.1.11",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.10.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^4.0.0-alpha.25",
     "terser": "^5.48.0",
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.61.0",
-    "vite": "^5.4.6"
+    "vite": "^5.4.6",
+    "vitest": "^4.1.9"
   }
 }

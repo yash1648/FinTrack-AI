@@ -172,16 +172,16 @@ const InsightsPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs font-bold text-slate-400">
                     <span>Spent so far</span>
-                    <span>{Math.round((projection.days_elapsed / projection.days_in_month) * 100)}% of month</span>
+                    <span>{Math.round((projection.daysElapsed / projection.daysInMonth) * 100)}% of month</span>
                   </div>
                   <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                      style={{ width: `${(projection.days_elapsed / projection.days_in_month) * 100}%` }}
+                      style={{ width: `${(projection.daysElapsed / projection.daysInMonth) * 100}%` }}
                     />
                   </div>
                   <p className="text-xs text-slate-400 italic">
-                    Based on your spending in the first {projection.days_elapsed} days.
+                    Based on your spending in the first {projection.daysElapsed} days.
                   </p>
                 </div>
 
@@ -192,7 +192,7 @@ const InsightsPage: React.FC = () => {
                   </div>
                   <div className="flex-1 p-3 bg-white/5 rounded-2xl border border-white/5">
                     <p className="text-[10px] font-bold text-slate-500 uppercase">Daily Average</p>
-                    <p className="text-sm font-bold text-slate-200">{formatCurrency((projection.spent / projection.days_elapsed) || 0, user?.currency)}</p>
+                    <p className="text-sm font-bold text-slate-200">{formatCurrency((projection.spent / projection.daysElapsed) || 0, user?.currency)}</p>
                   </div>
                 </div>
               </div>

@@ -12,8 +12,8 @@ export interface ApiResponse<T> {
 
 export interface PaginationDto {
   page: number;
-  size: number;
-  totalElements: number;
+  limit: number;
+  total: number;
   totalPages: number;
 }
 
@@ -169,6 +169,8 @@ export interface BudgetAlert {
   categoryName: string;
   status: string;
   percentage: number;
+  spent: number;
+  limit: number;
 }
 
 export interface SpendingTrend {
@@ -189,15 +191,21 @@ export interface InsightData {
 }
 
 export interface AnomalyResponse {
+  transactionId: string;
   date: string;
   amount: number;
   category: string;
+  average: number;
+  deviation: string;
   reason: string;
 }
 
 export interface ProjectionResponse {
+  spent: number;
   projected: number;
-  confidence: number;
+  daysElapsed: number;
+  daysInMonth: number;
+  currency: string;
 }
 
 // ─── Notifications ──────────────────────────────────────────────────────────
@@ -207,7 +215,7 @@ export interface NotificationResponse {
   type: string;
   title: string;
   body: string;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
 }
 
@@ -221,7 +229,7 @@ export interface NotificationQueryParams {
 
 export interface DraftTransactionDTO {
   amount: number;
-  type: TransactionType;
+  type: string;
   categoryId: string;
   categoryName: string;
   description: string;

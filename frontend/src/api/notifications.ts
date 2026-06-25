@@ -5,7 +5,9 @@ export const notificationsApi = {
   getNotifications: async (
     params: NotificationQueryParams
   ): Promise<ApiResponse<NotificationResponse[]> & { pagination: PaginationDto }> => {
-    return apiClient.get('/notifications', { params });
+    // Convert camelCase unreadOnly to snake_case unread_only for backend
+    const { unreadOnly, ...rest } = params;
+    return apiClient.get('/notifications', { params: { ...rest, unread_only: unreadOnly } });
   },
 
   markAsRead: async (id: string): Promise<ApiResponse<NotificationResponse>> => {

@@ -33,6 +33,33 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Pivot backend monthly trend [{year, month, type, amount}] -> [{month: "Jan 2024", income, expense}]
+function pivotMonthly(data: any[]): any[] {
+  const map = new Map<string, { income: number; expense: number }>();
+  for (const row of data) {
+    const key = `${MONTH_NAMES[row.month - 1]} ${row.year}`;
+    const entry = map.get(key) || { income: 0, expense: 0 };
+    if (row.type === 'INCOME') entry.income += row.amount;
+    else if (row.type === 'EXPENSE') entry.expense += row.amount;
+    map.set(key, entry);
+  }
+  return Array.from(map.entries()).map(([month, vals]) => ({ month, ...vals }));
+}
+
+// Pivot backend daily trend [{date, type, amount}] -> [{date, income, expense}]
+function pivotDaily(data: any[]): any[] {
+  const map = new Map<string, { income: number; expense: number }>();
+  for (const row of data) {
+    const entry = map.get(row.date) || { income: 0, expense: 0 };
+    if (row.type === 'INCOME') entry.income += row.amount;
+    else if (row.type === 'EXPENSE') entry.expense += row.amount;
+    map.set(row.date, entry);
+  }
+  return Array.from(map.entries()).map(([date, vals]) => ({ date, ...vals }));
+}
+
 const ReportsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [dateRange, setDateRange] = useState({
@@ -58,8 +85,8 @@ const ReportsPage: React.FC = () => {
   const isLoading = isDistLoading || isMonthlyLoading || isDailyLoading;
 
   const distribution = distributionData?.data || [];
-  const monthly = monthlyData?.data || [];
-  const daily = dailyData?.data || [];
+  const monthly = pivotMonthly(monthlyData?.data || []);
+  const daily = pivotDaily(dailyData?.data || []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">

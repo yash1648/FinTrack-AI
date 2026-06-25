@@ -18,6 +18,7 @@ public record RegisterRequest (
         )
         String password,
         @NotBlank
-        String name
+        String name,
+        String currency
 ){
 }

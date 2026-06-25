@@ -54,6 +54,8 @@ public class AuthService {
         String verificationToken=
                 UUID.randomUUID().toString().replace("-", "");
 
+        String currency = request.currency() != null ? request.currency() : "INR";
+
         User user=User.builder()
                 .email(request.email())
                 .name(request.name())
@@ -61,7 +63,7 @@ public class AuthService {
                 .verificationToken(verificationToken)
                 .verificationTokenExpiry(LocalDateTime.now().plusMinutes(15))
                 .emailVerified(false)
-                .currency("INR")
+                .currency(currency)
                 .active(true)
                 .build();
 

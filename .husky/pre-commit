@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+echo "🔍 Running pre-commit checks..."
+
+# ─── Backend: Run checkstyle on staged Java files ─────────────────────────────
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.java$' || true)
+if [ -n "$STAGED_JAVA" ]; then
+  echo "  Checking Java files..."
+  cd backend && ./mvnw checkstyle:check --batch-mode -q 2>/dev/null
+  CD_EXIT=$?
+  cd ..
+  if [ $CD_EXIT -ne 0 ]; then
+    echo "❌ Backend checkstyle failed"
+    exit 1
+  fi
+fi
+
+# ─── Frontend: Run ESLint on staged files ─────────────────────────────────────
+STAGED_FRONTEND=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'frontend/src/.*\.(ts|tsx)$' || true)
+if [ -n "$STAGED_FRONTEND" ]; then
+  echo "  Linting frontend files..."
+  cd frontend
+  echo "$STAGED_FRONTEND" | sed 's|^frontend/||' | xargs npx eslint --fix
+  ESLINT_EXIT=$?
+  cd ..
+  if [ $ESLINT_EXIT -ne 0 ]; then
+    echo "❌ Frontend ESLint failed"
+    exit 1
+  fi
+fi
+
+echo "✅ All checks passed"

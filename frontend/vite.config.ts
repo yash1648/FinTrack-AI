@@ -1,7 +1,11 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+
+// Detect if we're building for Tauri (env var set in build:tauri script)
+const isTauriBuild = process.env.TAURI_BUILD === 'true';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,12 +13,29 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
+  // Prevent vite from obscuring Rust errors
+  clearScreen: false,
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+
+  // Vitest configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    css: true,
+  },
+
   build: {
+    // Tauri uses a custom protocol for loading files, not relative paths
+    assetsDir: '',
+
     rollupOptions: {
       output: {
         manualChunks: {
@@ -28,17 +49,21 @@ export default defineConfig({
         },
       },
     },
-    sourcemap: false,
+    sourcemap: isTauriBuild, // Enable sourcemaps for Tauri debugging
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
+        drop_console: !isTauriBuild,
+        drop_debugger: !isTauriBuild,
       },
     },
   },
+
   server: {
     port: 3000,
+    // Tauri dev server needs to be strict about the host
+    strictPort: true,
+
     proxy: {
       '/api/v1': {
         target: 'http://localhost:8080',
@@ -50,4 +75,7 @@ export default defineConfig({
       },
     },
   },
+
+  // Tauri-specific env vars are handled via the build script, not client envPrefix
+  envPrefix: ['VITE_'],
 });

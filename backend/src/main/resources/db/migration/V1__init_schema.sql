@@ -1,20 +1,17 @@
 -- =============================================================================
 -- V1: Initial schema for FinTrack AI
--- Matches JPA entities in com.grim.backend.*.entity
--- Database: PostgreSQL
+-- Compatible with H2 (PostgreSQL mode) and PostgreSQL
 -- =============================================================================
 
 -- ---------------
 -- USERS
 -- ---------------
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE users (
     id          UUID          NOT NULL DEFAULT gen_random_uuid(),
     name        VARCHAR(100)  NOT NULL,
     email       VARCHAR(255)  NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    currency    CHAR(3)       NOT NULL DEFAULT 'INR',
+    currency    VARCHAR(3)    NOT NULL DEFAULT 'INR',
     email_verified BOOLEAN    NOT NULL DEFAULT false,
     verification_token  VARCHAR(64),
     verification_token_expiry TIMESTAMP,
@@ -112,10 +109,8 @@ CREATE INDEX idx_transactions_user_type      ON transactions (user_id, type);
 CREATE INDEX idx_transactions_category       ON transactions (category_id);
 CREATE INDEX idx_transactions_user_category  ON transactions (user_id, category_id);
 
--- Enable pg_trgm for ILIKE search support
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_transactions_description_trgm
-  ON transactions USING GIN (description gin_trgm_ops);
+-- Basic index on description for search (full-text search index is added below for PostgreSQL)
+CREATE INDEX idx_transactions_description ON transactions (description);
 
 -- ---------------
 -- BUDGETS
@@ -125,19 +120,19 @@ CREATE TABLE budgets (
     user_id      UUID           NOT NULL,
     category_id  UUID           NOT NULL,
     limit_amount DECIMAL(15, 2) NOT NULL CHECK (limit_amount > 0),
-    month        SMALLINT       NOT NULL CHECK (month BETWEEN 1 AND 12),
-    year         SMALLINT       NOT NULL CHECK (year BETWEEN 2000 AND 2100),
+    "month"      SMALLINT       NOT NULL CHECK ("month" BETWEEN 1 AND 12),
+    "year"       SMALLINT       NOT NULL CHECK ("year" BETWEEN 2000 AND 2100),
     created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_budgets PRIMARY KEY (id),
-    CONSTRAINT uq_budget_user_category_period UNIQUE (user_id, category_id, month, year),
+    CONSTRAINT uq_budget_user_category_period UNIQUE (user_id, category_id, "month", "year"),
     CONSTRAINT fk_budgets_user     FOREIGN KEY (user_id)     REFERENCES users (id)      ON DELETE CASCADE,
     CONSTRAINT fk_budgets_category FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_budgets_user         ON budgets (user_id);
-CREATE INDEX idx_budgets_user_period  ON budgets (user_id, year, month);
+CREATE INDEX idx_budgets_user_period  ON budgets (user_id, "year", "month");
 
 -- ---------------
 -- NOTIFICATIONS

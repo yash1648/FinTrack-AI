@@ -136,6 +136,8 @@ public class TransactionService {
                     alert.put("categoryName", ((Map) b.get("category")).get("name"));
                     alert.put("status", b.get("status"));
                     alert.put("percentage", b.get("percentage"));
+                    alert.put("spent", b.get("spent"));
+                    alert.put("limit", b.get("limitAmount"));
                     return alert;
                 })
                 .toList();

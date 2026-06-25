@@ -4,7 +4,6 @@ import { notificationsApi } from '@/api/notifications';
 import { 
   Bell, 
   CheckCheck, 
-  Trash2, 
   Loader2, 
   Circle,
   AlertCircle,
@@ -12,7 +11,8 @@ import {
   Receipt,
   Tag,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate, cn } from '@/lib/utils';
@@ -55,21 +55,15 @@ const NotificationsPage: React.FC = () => {
   const pagination = notificationsData?.pagination || { page: 1, totalPages: 1 };
 
   const getIcon = (type: string) => {
-    switch (type) {
-      case 'BUDGET_ALERT': return AlertCircle;
-      case 'TRANSACTION': return Receipt;
-      case 'CATEGORY': return Tag;
-      default: return Bell;
-    }
+    if (type.startsWith('budget_')) return AlertCircle;
+    if (type === 'security_alert') return ShieldCheck;
+    return Bell;
   };
 
   const getColor = (type: string) => {
-    switch (type) {
-      case 'BUDGET_ALERT': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
-      case 'TRANSACTION': return 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20';
-      case 'CATEGORY': return 'text-blue-500 bg-blue-50 dark:bg-blue-900/20';
-      default: return 'text-slate-500 bg-slate-50 dark:bg-slate-900/20';
-    }
+    if (type.startsWith('budget_')) return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
+    if (type === 'security_alert') return 'text-red-500 bg-red-50 dark:bg-red-900/20';
+    return 'text-slate-500 bg-slate-50 dark:bg-slate-900/20';
   };
 
   return (
@@ -119,7 +113,7 @@ const NotificationsPage: React.FC = () => {
                   key={notif.id} 
                   className={cn(
                     "p-6 flex items-start gap-4 transition-colors group",
-                    !notif.is_read ? "bg-blue-50/30 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    !notif.isRead ? "bg-blue-50/30 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   )}
                 >
                   <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm", colorClass)}>
@@ -128,16 +122,16 @@ const NotificationsPage: React.FC = () => {
                   
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <h4 className={cn("text-base font-bold", !notif.is_read ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400")}>
+                      <h4 className={cn("text-base font-bold", !notif.isRead ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400")}>
                         {notif.title}
                       </h4>
-                      <span className="text-xs text-slate-400 font-medium">{formatDate(notif.created_at)}</span>
+                      <span className="text-xs text-slate-400 font-medium">{formatDate(notif.createdAt)}</span>
                     </div>
-                    <p className={cn("text-sm leading-relaxed", !notif.is_read ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400")}>
+                    <p className={cn("text-sm leading-relaxed", !notif.isRead ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400")}>
                       {notif.body}
                     </p>
                     
-                    {!notif.is_read && (
+                    {!notif.isRead && (
                       <button
                         onClick={() => handleMarkRead(notif.id)}
                         className="text-xs font-bold text-blue-600 hover:text-blue-500 mt-2 flex items-center gap-1 transition-colors"
@@ -148,7 +142,7 @@ const NotificationsPage: React.FC = () => {
                     )}
                   </div>
                   
-                  {!notif.is_read && (
+                  {!notif.isRead && (
                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0" />
                   )}
                 </div>

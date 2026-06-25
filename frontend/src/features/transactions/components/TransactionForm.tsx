@@ -54,7 +54,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     defaultValues: {
       amount: transaction?.amount?.toString() || '',
       type: transaction?.type || 'EXPENSE',
-      category_id: transaction?.category?.id || '',
+      category_id: transaction?.category?.id || transaction?.category_id || '',
       description: transaction?.description || '',
       date: transaction?.date || new Date().toISOString().split('T')[0],
     },

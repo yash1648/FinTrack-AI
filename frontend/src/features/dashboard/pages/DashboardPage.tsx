@@ -245,9 +245,9 @@ const DashboardPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {summary.activeBudgetAlerts.map((alert: any) => (
-              <div key={alert.category} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-amber-100 dark:border-amber-900/20">
+              <div key={alert.budgetId} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-amber-100 dark:border-amber-900/20">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{alert.category}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{alert.categoryName}</span>
                   <span className="text-xs font-bold text-amber-600">{Math.round(alert.percentage)}%</span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">

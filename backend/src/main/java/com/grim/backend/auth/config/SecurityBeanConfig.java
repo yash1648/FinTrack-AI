@@ -2,6 +2,7 @@ package com.grim.backend.auth.config;
 
 import com.grim.backend.auth.security.CustomUserDetailsService;
 import com.grim.backend.auth.security.JwtAuthenticationFilter;
+import com.grim.backend.common.filter.SecurityHeadersFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +35,12 @@ public class SecurityBeanConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)
+                        )
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -66,7 +73,8 @@ public class SecurityBeanConfig {
                         ).authenticated()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtFilterChain, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilterChain, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new SecurityHeadersFilter(), JwtAuthenticationFilter.class);
         return http.build();
     }
 

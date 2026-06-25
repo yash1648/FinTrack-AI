@@ -5,6 +5,20 @@ import { useAuthStore } from '@/stores/authStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+/**
+ * Get the WebSocket URL based on the environment.
+ * In Tauri production builds, VITE_WS_URL is set to the full backend URL.
+ * In Vite dev mode, the '/ws' path is proxied by Vite.
+ */
+const getWsUrl = (): string => {
+  // If running in Tauri, use the configured backend URL
+  const tauriWsUrl = (window as any).__TAURI_WS_URL__;
+  if (tauriWsUrl) return tauriWsUrl;
+
+  // Use env var or default to dev proxy path
+  return import.meta.env.VITE_WS_URL || '/ws';
+};
+
 export const useWebSocket = () => {
   const { user, accessToken } = useAuthStore();
   const queryClient = useQueryClient();
@@ -13,7 +27,8 @@ export const useWebSocket = () => {
   const connect = useCallback(() => {
     if (!user || !accessToken) return;
 
-    const socket = new SockJS('/ws');
+    const wsUrl = getWsUrl();
+    const socket = new SockJS(wsUrl);
     const client = new Client({
       webSocketFactory: () => socket,
       connectHeaders: {

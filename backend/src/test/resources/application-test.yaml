@@ -1,0 +1,82 @@
+# =============================================================================
+# FinTrack AI — Test Profile Configuration
+# Uses H2 in PostgreSQL mode for fast, isolated testing
+# =============================================================================
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=MONTH,YEAR
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: false
+
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+  mail:
+    host: localhost
+    port: 3025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+  ai:
+    openai:
+      api-key: test-key
+      base-url: http://localhost:9999
+      chat:
+        options:
+          model: test-model
+
+  cache:
+    type: none
+
+jwt:
+  secret: test-secret-key-that-is-at-least-thirty-two-bytes-long-for-hmac
+  access-expiration: 3600000
+  refresh-expiration: 86400000
+
+nlp:
+  nim:
+    enabled: false
+  fallback:
+    enabled: false
+  prefilter:
+    min-text-length: 3
+    max-text-length: 500
+
+app:
+  frontend-url: http://localhost:3000
+
+logging:
+  level:
+    root: WARN
+    com.grim: DEBUG
