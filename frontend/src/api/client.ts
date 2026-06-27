@@ -19,10 +19,19 @@ interface RetryConfig extends InternalAxiosRequestConfig {
   _retryCount?: number;
 }
 
+// Track endpoints that should NOT auto-refresh on 401 (e.g. auth endpoints)
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
+function isAuthEndpoint(url?: string): boolean {
+  if (!url) return false;
+  return AUTH_ENDPOINTS.some((ep) => url.includes(ep));
+}
+
 // Request interceptor for adding the bearer token
 apiClient.interceptors.request.use(
   (config) => {
     const { accessToken } = useAuthStore.getState();
+    // Only add the header if we actually have a token (avoid "Bearer null")
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -31,18 +40,60 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * Attempt to extract a human-readable message from any backend error format.
+ * Backend formats:
+ *   ApiErrorResponse: { success: false, error: { code, message, fields? } }
+ *   Spring defaults:  { error, message, path, status, timestamp }
+ *   HTML:             response statusText
+ */
+function extractErrorMessage(error: unknown): string {
+  const err = error as any;
+  const data = err?.response?.data;
+
+  if (!data) {
+    return err?.message || 'An unexpected error occurred';
+  }
+
+  // Our ApiErrorResponse format
+  if (data.error?.message) {
+    return data.error.message;
+  }
+
+  // Spring Boot default error format
+  if (data.message && typeof data.message === 'string') {
+    return data.message;
+  }
+
+  // Axios error message
+  if (err?.message) {
+    return err.message;
+  }
+
+  return 'An unexpected error occurred';
+}
+
 // Response interceptor for handling 401 and token refresh
 apiClient.interceptors.response.use(
   (response) => {
     // Backend uses the envelope pattern: { success: true, data: { ... }, pagination: { ... } }
-    // We unwrap the data for easier use in TanStack Query
-    if (response.data && response.data.success) {
+    // For void responses (204 No Content), return as-is
+    if (response.status === 204 || !response.data) {
+      return response;
+    }
+    // Unwrap the envelope for easier use in TanStack Query
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && response.data.success) {
       return response.data;
     }
     return response;
   },
   async (error) => {
     const originalRequest = error.config as RetryConfig;
+
+    // Don't try to refresh on auth endpoints themselves (avoid loops)
+    if (isAuthEndpoint(originalRequest.url)) {
+      return Promise.reject(new Error(extractErrorMessage(error)));
+    }
 
     // Prevent infinite retry loop — cap at MAX_REFRESH_RETRIES
     if (
@@ -55,7 +106,10 @@ apiClient.interceptors.response.use(
 
       try {
         const { refreshToken, setAccessToken, logout } = useAuthStore.getState();
-        if (!refreshToken) throw new Error('No refresh token available');
+        if (!refreshToken) {
+          logout();
+          return Promise.reject(new Error('Session expired. Please log in again.'));
+        }
 
         // Call refresh endpoint using a fresh axios instance (no interceptor loops)
         const response = await axios.post(
@@ -63,27 +117,22 @@ apiClient.interceptors.response.use(
           { refreshToken },
           { timeout: 10000 }
         );
-        const { accessToken } = response.data.data;
+        const { accessToken: newAccessToken } = response.data.data;
 
-        setAccessToken(accessToken);
+        setAccessToken(newAccessToken);
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Only logout if we've exhausted retries or got a real auth failure
+        // Refresh failed — session is truly dead
         useAuthStore.getState().logout();
-        return Promise.reject(refreshError);
+        return Promise.reject(new Error('Session expired. Please log in again.'));
       }
     }
 
-    // Extract error message from backend's ApiErrorResponse format
-    const errorData = error.response?.data;
-    if (errorData && errorData.error && errorData.error.message) {
-      return Promise.reject(new Error(errorData.error.message));
-    }
-    return Promise.reject(errorData || error);
+    return Promise.reject(new Error(extractErrorMessage(error)));
   }
 );
 

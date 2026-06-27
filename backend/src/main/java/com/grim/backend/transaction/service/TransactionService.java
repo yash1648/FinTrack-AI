@@ -127,6 +127,9 @@ public class TransactionService {
         List<Object[]> trend = transactionRepository.sumByDay(userId, weekAgo, now);
         List<Map<String, Object>> activeBudgets = budgetService.getBudgets(userId, null, null);
 
+        // Category breakdown for expense pie chart
+        List<Object[]> breakdown = transactionRepository.sumByCategory(userId, startOfMonth, endOfMonth);
+
         // Build alerts from budgets
         List<Map<String, Object>> alerts = activeBudgets.stream()
                 .filter(b -> !"ok".equals(b.get("status")))
@@ -175,6 +178,11 @@ public class TransactionService {
                 .toList());
         summary.put("activeBudgetAlerts", alerts);
         summary.put("recentSpending", recentSpending);
+        summary.put("categoryBreakdown", breakdown.stream()
+                .collect(Collectors.toMap(
+                        r -> (String) r[0],
+                        r -> (BigDecimal) r[1]
+                )));
 
         return summary;
     }

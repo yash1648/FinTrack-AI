@@ -41,10 +41,13 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import org.mockito.Mockito;
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
@@ -1095,6 +1098,9 @@ class TransactionServiceTest {
             warningBudget.put("spent", new BigDecimal("425.00"));
             warningBudget.put("limitAmount", new BigDecimal("500.00"));
 
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
+
                 when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
                 when(transactionRepository.sumByType(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
                         .thenReturn(sums);
@@ -1102,6 +1108,8 @@ class TransactionServiceTest {
                         .thenReturn(recent);
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
                         .thenReturn(trend);
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
+                        .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of(warningBudget));
 
@@ -1116,7 +1124,8 @@ class TransactionServiceTest {
                         .containsEntry("month", "JUNE 2026")
                         .containsKey("recentTransactions")
                         .containsKey("activeBudgetAlerts")
-                        .containsKey("recentSpending");
+                        .containsKey("recentSpending")
+                        .containsKey("categoryBreakdown");
 
                 assertThat(result.get("activeBudgetAlerts")).asList().hasSize(1);
 
@@ -1140,11 +1149,14 @@ class TransactionServiceTest {
                 verify(transactionRepository).findTop5ByUserIdOrderByDateDesc(userId);
                 verify(transactionRepository).sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW);
                 verify(budgetService).getBudgets(userId, null, null);
+            }
         }
 
         @Test
         @DisplayName("should return zero income and expenses when no transactions exist")
         void noTransactions() {
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
 
                 when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
                 when(transactionRepository.sumByType(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
@@ -1152,6 +1164,8 @@ class TransactionServiceTest {
                 when(transactionRepository.findTop5ByUserIdOrderByDateDesc(userId))
                         .thenReturn(List.of());
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
+                        .thenReturn(List.of());
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
                         .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of());
@@ -1166,11 +1180,15 @@ class TransactionServiceTest {
                 assertThat(result.get("activeBudgetAlerts")).asList().isEmpty();
                 assertThat(result.get("recentTransactions")).asList().isEmpty();
                 assertThat(result.get("recentSpending")).asList().isEmpty();
+            }
         }
 
         @Test
         @DisplayName("should filter out budgets with 'ok' status from alerts")
         void onlyNonOkBudgetsInAlerts() {
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
+
             Map<String, Object> okBudget = new HashMap<>();
             okBudget.put("status", "ok");
 
@@ -1181,12 +1199,15 @@ class TransactionServiceTest {
                         .thenReturn(List.of());
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
                         .thenReturn(List.of());
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
+                        .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of(okBudget));
 
                 Map<String, Object> result = transactionService.getDashboardSummary(userId);
 
                 assertThat(result.get("activeBudgetAlerts")).asList().isEmpty();
+            }
         }
 
         @Test
@@ -1200,12 +1221,17 @@ class TransactionServiceTest {
             exceededBudget.put("spent", new BigDecimal("600.00"));
             exceededBudget.put("limitAmount", new BigDecimal("500.00"));
 
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
+
                 when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
                 when(transactionRepository.sumByType(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
                         .thenReturn(List.of());
                 when(transactionRepository.findTop5ByUserIdOrderByDateDesc(userId))
                         .thenReturn(List.of());
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
+                        .thenReturn(List.of());
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
                         .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of(exceededBudget));
@@ -1218,11 +1244,15 @@ class TransactionServiceTest {
                 assertThat(alerts.get(0))
                         .containsEntry("status", "exceeded")
                         .containsEntry("categoryName", "Groceries");
+            }
         }
 
         @Test
         @DisplayName("should only include EXPENSE type in recentSpending")
         void recentSpendingOnlyExpenses() {
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
+
             List<Object[]> trend = List.of(
                     new Object[]{LocalDate.of(2026, 6, 24), TransactionType.EXPENSE, new BigDecimal("150.00")},
                     new Object[]{LocalDate.of(2026, 6, 23), TransactionType.INCOME, new BigDecimal("5000.00")}
@@ -1235,6 +1265,8 @@ class TransactionServiceTest {
                         .thenReturn(List.of());
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
                         .thenReturn(trend);
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
+                        .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of());
 
@@ -1245,11 +1277,15 @@ class TransactionServiceTest {
                         (List<Map<String, Object>>) result.get("recentSpending");
                 assertThat(recentSpending).hasSize(1);
                 assertThat(recentSpending.get(0)).containsEntry("amount", new BigDecimal("150.00"));
+            }
         }
 
         @Test
         @DisplayName("should have savings as zero when expenses exceed income")
         void savingsZeroWhenNegative() {
+            try (var mock = mockStatic(LocalDate.class, Mockito.CALLS_REAL_METHODS)) {
+                mock.when(() -> LocalDate.now()).thenReturn(FIXED_NOW);
+
             List<Object[]> sums = List.of(
                     new Object[]{TransactionType.INCOME, new BigDecimal("1000.00")},
                     new Object[]{TransactionType.EXPENSE, new BigDecimal("1500.00")}
@@ -1262,6 +1298,8 @@ class TransactionServiceTest {
                         .thenReturn(List.of());
                 when(transactionRepository.sumByDay(userId, FIXED_WEEK_AGO, FIXED_NOW))
                         .thenReturn(List.of());
+                when(transactionRepository.sumByCategory(userId, FIXED_START_OF_MONTH, FIXED_END_OF_MONTH))
+                        .thenReturn(List.of());
                 when(budgetService.getBudgets(userId, null, null))
                         .thenReturn(List.of());
 
@@ -1270,6 +1308,7 @@ class TransactionServiceTest {
                 assertThat(result)
                         .containsEntry("balance", new BigDecimal("-500.00"))
                         .containsEntry("savings", BigDecimal.ZERO);
+            }
         }
 
         @Test
